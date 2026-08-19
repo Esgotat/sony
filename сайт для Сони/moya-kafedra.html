@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Моя кафедра — Open University</title>
+<meta name="description" content="Ваша кафедра: состав, показатели и люди.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="dept">
+
+<header class="hd" id="hd"></header>
+
+<div class="frame">
+  <nav class="subnav" id="subnav" aria-label="Разделы"></nav>
+
+  <main class="content">
+    <div class="page-head">
+      <h1 class="page-title">Моя кафедра</h1>
+    </div>
+
+    <div class="dept-select-row">
+      <label for="deptSelect">Выберите кафедру</label>
+      <select class="select" id="deptSelect"></select>
+    </div>
+
+    <section class="dept-card" id="deptDetail"></section>
+
+    <h2 class="sub-title">Люди кафедры · <span id="staffCount"></span></h2>
+    <section class="cards" id="staff"></section>
+    <div class="empty" id="empty" hidden>На этой кафедре пока никого нет из ваших знакомых.</div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

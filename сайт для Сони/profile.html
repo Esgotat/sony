@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Профиль — Open University</title>
+<meta name="description" content="Страница сотрудника: интересы, опыт, кафедра, публикации и рецензии. Владелец может редактировать профиль.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="person">
+<header class="hd" id="hd"></header>
+<div class="frame">
+<nav class="subnav" id="subnav" aria-label="Разделы"></nav>
+<main class="content">
+<p class="back" id="backLink"><a href="znakomye.html">← Знакомые</a></p>
+<section class="profile-card" id="profile"></section>
+<div class="owner-bar" id="ownerBar">
+<button class="edit-btn" id="editBtn" type="button">✎ Редактировать профиль</button>
+<button class="edit-btn" id="createDeptBtn" type="button">+ Создать кафедру</button>
+</div>
+<form id="editForm" class="pub-form" hidden>
+<h2 class="form-sub">Редактирование профиля</h2>
+<label class="fld"><span>Должность / степень (текстом)</span><input id="fNote"></label>
+<div class="fld-row">
+<div class="fld">
+<span>Кафедра</span>
+<select class="select" id="fDept"></select>
+</div>
+<div class="fld">
+<span>Степень</span>
+<select class="select" id="fDeg">
+<option value="">— без степени —</option>
+<option value="d">Доктор наук</option>
+<option value="k">Кандидат наук</option>
+<option value="a">Аспирант</option>
+</select>
+</div>
+</div>
+<label class="fld"><span>Опыт</span><textarea id="fExp" rows="3"></textarea></label>
+<label class="fld"><span>Интересы (через запятую)</span><input id="fInts"></label>
+<div class="form-actions">
+<button class="file-btn" type="submit">Сохранить</button>
+<button class="edit-btn" id="cancelBtn" type="button">Отмена</button>
+</div>
+</form>
+<form id="newDeptForm" class="pub-form" hidden>
+<h2 class="form-sub">Новая кафедра (только для администратора)</h2>
+<div class="fld-row">
+<label class="fld"><span>Название *</span><input id="ndName" required></label>
+<label class="fld"><span>Направление *</span><select class="select" id="ndFac"></select></label>
+</div>
+<div class="fld-row">
+<label class="fld"><span>Эмодзи</span><input id="ndEmoji" placeholder="🎓" maxlength="4"></label>
+<label class="fld"><span>Описание</span><input id="ndDesc"></label>
+</div>
+<div class="form-actions"><button class="file-btn" type="submit">Создать кафедру</button></div>
+</form>
+<div class="tiles" id="tiles"></div>
+<h2 class="sub-title">Интересы</h2>
+<div class="ints" id="ints"></div>
+<h2 class="sub-title">Опыт</h2>
+<p class="exp" id="exp"></p>
+<h2 class="sub-title">Кафедра</h2>
+<section class="dept-card" id="personDept"></section>
+<h2 class="sub-title">Публикации · <span id="pCount"></span></h2>
+<section class="cards" id="cards"></section>
+<div class="empty" id="emptyPubs" hidden>Публикаций пока нет.</div>
+<h2 class="sub-title">Рецензии · <span id="rCount"></span></h2>
+<section class="cards" id="revCards"></section>
+<div class="empty" id="emptyRev" hidden>Рецензий пока нет.</div>
+<div id="ownerOnly">
+<h2 class="sub-title">Мои знакомые · <span id="myPeopleCount"></span></h2>
+<section class="cards" id="peopleCards"></section>
+<div class="empty" id="emptyPeople" hidden>Никого не нашлось.</div>
+<h2 class="sub-title">Быстрые ссылки</h2>
+<div class="qlinks" id="qlinks"></div>
+</div>
+</main>
+</div>
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
