@@ -602,8 +602,21 @@ place-items: center;
 @media (max-width: 640px) {
 .content { padding: 20px 16px 32px; }
 .subnav { padding: 10px 16px; gap: 16px; }
-.dd { position: static; }
-.dd-menu { left: 0; right: 0; }
+  .dd { position: static; }
+  .dd-menu { 
+    position: static; 
+    left: auto; 
+    right: auto; 
+    box-shadow: none; 
+    border: none; 
+    border-left: 2px solid var(--accent); 
+    margin: 4px 0 4px 8px; 
+    padding: 4px 0; 
+  }
+  .dd-menu a { 
+    padding: 8px 12px; 
+    font-size: 12px; 
+  }
 .page-title { font-size: 22px; }
 .legend { gap: 10px; padding: 8px 12px; }
 .lg { font-size: 10px; gap: 6px; }
