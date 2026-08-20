@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Мои запросы — Open University</title>
+<meta name="description" content="Создание запросов: руководство, исследование, проверка, перевод.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="newreq">
+
+<header class="hd" id="hd"></header>
+
+<div class="frame">
+  <nav class="subnav" id="subnav" aria-label="Разделы"></nav>
+
+  <main class="content">
+    <div class="page-head">
+      <h1 class="page-title">Мои запросы</h1>
+    </div>
+
+    <form id="reqForm" class="pub-form">
+      <h2 class="form-sub">Новый запрос</h2>
+
+      <div class="fld">
+        <span>Вид запроса</span>
+        <select class="select" id="reqType">
+          <option value="check">Проверка</option>
+          <option value="sup">Руководство</option>
+          <option value="res">Исследование</option>
+          <option value="trn">Перевод</option>
+        </select>
+      </div>
+
+      <div id="reqFields"></div>
+
+      <div class="form-actions">
+        <button class="file-btn" type="submit">Отправить запрос</button>
+      </div>
+    </form>
+
+    <h2 class="sub-title">Мои запросы · <span id="myReqCount"></span></h2>
+    <div class="req-list" id="myReqs"></div>
+    <div class="empty" id="empty" hidden>У вас пока нет запросов.</div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

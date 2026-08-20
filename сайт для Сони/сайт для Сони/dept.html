@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Кафедра — Open University</title>
+<meta name="description" content="Страница кафедры: состав, показатели, люди и публикации.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="deptpage">
+
+<header class="hd" id="hd"></header>
+
+<div class="frame">
+  <nav class="subnav" id="subnav" aria-label="Разделы"></nav>
+
+  <main class="content">
+    <p class="back"><a href="index.html">← Все кафедры</a></p>
+
+    <section class="dept-card" id="deptHead"></section>
+
+    <h2 class="sub-title">Люди кафедры · <span id="pplCount"></span></h2>
+    <section class="cards" id="pplCards"></section>
+    <div class="empty" id="emptyPpl" hidden>На этой кафедре пока никого нет в базе.</div>
+
+    <h2 class="sub-title">Публикации кафедры · <span id="pubCount"></span></h2>
+    <section class="cards" id="pubCards"></section>
+    <div class="empty" id="emptyPub" hidden>Публикаций кафедры пока нет в базе.</div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
