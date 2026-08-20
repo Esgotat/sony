@@ -1,8 +1,12 @@
+/* ============================================================
+ХРАНИЛИЩЕ + СИНХРОНИЗАЦИЯ ЧЕРЕЗ FIREBASE НАПРЯМУЮ
+Без серверных функций — работает на любом статическом хостинге.
+============================================================ */
 const FB = 'https://openuniversity-df24f-default-rtdb.firebaseio.com';
 const hashPass = (p) => btoa(unescape(encodeURIComponent(p)));
 const _ts = () => Date.now();
 
-/* ---------- ПРЯМОЙ REST API FIREBASE ---------- */
+/* ---------- ПРЯМОЙ FIREBASE REST API ---------- */
 const FBApi = {
   async get(path) {
     const r = await fetch(FB + path + '.json', { cache: 'no-store' });
@@ -17,22 +21,84 @@ const FBApi = {
     });
     if (!r.ok) throw new Error('FB PUT ' + r.status);
     return await r.json();
-  },
-  async patch(path, data) {
-    const r = await fetch(FB + path + '.json', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
-    });
-    if (!r.ok) throw new Error('FB PATCH ' + r.status);
-    return await r.json();
   }
 };
 
-/* ---------- СИНХРОНИЗАЦИЯ ---------- */
+/* ---------- СЛИЯНИЕ СОСТОЯНИЙ ---------- */
+function mergeKeyOf(k, item) {
+  if (item == null) return 'null';
+  if (typeof item !== 'object') return 'v:' + String(item);
+  if (item.id != null) return 'i:' + item.id;
+  if (item.n != null) return 'n:' + item.n;
+  return 'j:' + JSON.stringify(item);
+}
+
+function mergeListByKey(k, a, b) {
+  const m = new Map();
+  (a || []).forEach((x) => m.set(mergeKeyOf(k, x), x));
+  (b || []).forEach((x) => {
+    const key = mergeKeyOf(k, x);
+    const ex = m.get(key);
+    if (!ex || ((x && x._ts) || 0) > ((ex && ex._ts) || 0)) m.set(key, x);
+  });
+  return Array.from(m.values());
+}
+
+function mergeObjByKey(k, a, b) {
+  const o = {};
+  new Set([].concat(Object.keys(a), Object.keys(b))).forEach((id) => {
+    const x = a[id], y = b[id];
+    if (x === undefined) { o[id] = y; return; }
+    if (y === undefined) { o[id] = x; return; }
+    if (Array.isArray(x) || Array.isArray(y)) { o[id] = mergeListByKey(k, Array.isArray(x) ? x : [], Array.isArray(y) ? y : []); return; }
+    o[id] = ((y && y._ts) || 0) > ((x && x._ts) || 0) ? y : x;
+  });
+  return o;
+}
+
+function mergeState(a, b) {
+  const out = {};
+  const keys = new Set([].concat(Object.keys(a || {}), Object.keys(b || {})));
+  keys.forEach((k) => {
+    if (k === 'ou_session') return;
+    const av = a ? a[k] : undefined;
+    const bv = b ? b[k] : undefined;
+    if (av === undefined) { out[k] = bv; return; }
+    if (bv === undefined) { out[k] = av; return; }
+    if (Array.isArray(av) || Array.isArray(bv)) { out[k] = mergeListByKey(k, Array.isArray(av) ? av : [], Array.isArray(bv) ? bv : []); return; }
+    if (typeof av === 'object' && av && typeof bv === 'object' && bv) {
+      if (k.indexOf('ou_profile_') === 0) {
+        const newer = ((bv && bv._ts) || 0) > ((av && av._ts) || 0) ? bv : av;
+        const older = newer === bv ? av : bv;
+        out[k] = Object.assign({}, older, newer);
+      } else {
+        out[k] = mergeObjByKey(k, av, bv);
+      }
+      return;
+    }
+    out[k] = av;
+  });
+  return out;
+}
+
+function applyUserDeletes(state) {
+  const del = state.ou_users_deleted || [];
+  if (!del.length || !Array.isArray(state.ou_users)) return state;
+  state.ou_users = state.ou_users.filter((u) => !del.some((d) => d.id === u.id || d.email === u.email));
+  return state;
+}
+
+function applyMessageDeletes(state) {
+  const del = state.ou_messages_deleted || [];
+  if (!del.length || !Array.isArray(state.ou_messages)) return state;
+  state.ou_messages = state.ou_messages.filter((m) => !del.includes(m.id));
+  return state;
+}
+
+/* ---------- ОБЛАКО (Firebase напрямую) ---------- */
 const CloudSync = {
-  timer: null,
   silent: false,
+  timer: null,
   readLocal() {
     const o = {};
     for (let i = 0; i < localStorage.length; i++) {
@@ -41,6 +107,13 @@ const CloudSync = {
       try { o[k] = JSON.parse(localStorage.getItem(k)); } catch (e) {}
     }
     return o;
+  },
+  strip(state) {
+    const clean = JSON.parse(JSON.stringify(state));
+    ['ou_local_pubs', 'ou_local_translations'].forEach((k) => {
+      (clean[k] || []).forEach((x) => { if (x && x.fileData) delete x.fileData; });
+    });
+    return clean;
   },
   writeAll(state) {
     this.silent = true;
@@ -52,65 +125,35 @@ const CloudSync = {
   async load() {
     try {
       const cloud = await FBApi.get('/state');
-      if (cloud && typeof cloud === 'object') {
-        this.writeAll(this.mergeState(this.readLocal(), cloud));
-      }
+      if (!cloud || typeof cloud !== 'object' || Array.isArray(cloud)) return;
+      this.writeAll(applyMessageDeletes(applyUserDeletes(mergeState(this.readLocal(), cloud))));
       this.schedulePush();
-    } catch (e) { console.warn('FB load error', e); }
+    } catch (e) { /* офлайн */ }
   },
   schedulePush() {
     if (this.silent) return;
     clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.push(), 1000);
+    this.timer = setTimeout(() => this.push(), 700);
   },
   async push() {
     if (this.silent) return;
     try {
-      const local = this.readLocal();
-      const cloud = await FBApi.get('/state').catch(() => ({}));
-      const merged = this.mergeState(local, cloud || {});
-      await FBApi.put('/state', this.strip(merged));
+      let merged = this.readLocal();
+      try {
+        const cloud = await FBApi.get('/state');
+        if (cloud && typeof cloud === 'object') merged = mergeState(merged, cloud);
+      } catch (e) {}
+      merged = this.strip(applyMessageDeletes(applyUserDeletes(merged)));
+      await FBApi.put('/state', merged);
       this.writeAll(merged);
-    } catch (e) { console.warn('FB push error', e); }
-  },
-  pushNow() {
-    try {
-      const local = this.readLocal();
-      FBApi.put('/state', this.strip(local)).catch(() => {});
     } catch (e) {}
   },
-  mergeState(a, b) {
-    const out = {};
-    const keys = new Set([...Object.keys(a || {}), ...Object.keys(b || {})]);
-    keys.forEach((k) => {
-      if (k === 'ou_session') return;
-      const av = a?.[k], bv = b?.[k];
-      if (av === undefined) { out[k] = bv; return; }
-      if (bv === undefined) { out[k] = av; return; }
-      if (Array.isArray(av) || Array.isArray(bv)) {
-        out[k] = this.mergeList(Array.isArray(av) ? av : [], Array.isArray(bv) ? bv : []);
-        return;
-      }
-      out[k] = ((bv?._ts || 0) > (av?._ts || 0)) ? bv : av;
-    });
-    return out;
-  },
-  mergeList(a, b) {
-    const m = new Map();
-    a.forEach((x) => { const key = x?.id != null ? 'i:' + x.id : 'j:' + JSON.stringify(x); m.set(key, x); });
-    b.forEach((x) => {
-      const key = x?.id != null ? 'i:' + x.id : 'j:' + JSON.stringify(x);
-      const ex = m.get(key);
-      if (!ex || ((x?._ts || 0) > (ex?._ts || 0))) m.set(key, x);
-    });
-    return Array.from(m.values());
-  },
-  strip(state) {
-    const clean = JSON.parse(JSON.stringify(state));
-    ['ou_local_pubs', 'ou_local_translations'].forEach((k) => {
-      (clean[k] || []).forEach((x) => { if (x?.fileData) delete x.fileData; });
-    });
-    return clean;
+  pushNow() {
+    if (this.silent) return;
+    try {
+      const merged = this.strip(applyMessageDeletes(applyUserDeletes(this.readLocal())));
+      FBApi.put('/state', merged).catch(() => {});
+    } catch (e) {}
   }
 };
 
@@ -143,8 +186,10 @@ const LocalUsers = {
     const l = this.list();
     const i = l.findIndex((u) => u.id === id);
     if (i > -1) {
-      const u = l[i]; l.splice(i, 1);
-      const d = this.deleted(); d.push({ id: u.id, email: u.email });
+      const u = l[i];
+      l.splice(i, 1);
+      const d = this.deleted();
+      d.push({ id: u.id, email: u.email });
       localStorage.setItem(this.KEY, JSON.stringify(l));
       localStorage.setItem(this.DEL, JSON.stringify(d));
     }
@@ -185,7 +230,9 @@ const LocalDepts = {
       if (!d.includes(n)) { d.push(n); localStorage.setItem(this.DEL, JSON.stringify(d)); }
     }
   },
-  nextN(baseMax) { return Math.max(baseMax || 0, ...this.list().map((d) => d.n), 99) + 1; }
+  nextN(baseMax) {
+    return Math.max(baseMax || 0, ...this.list().map((d) => d.n), 99) + 1;
+  }
 };
 
 /* ---------- ПРАВКИ ЛЮДЕЙ ---------- */
@@ -210,7 +257,9 @@ const LocalFriends = {
     const l = this.list();
     if (!l.includes(id)) { l.push(id); localStorage.setItem(this.key(), JSON.stringify(l)); }
   },
-  remove(id) { localStorage.setItem(this.key(), JSON.stringify(this.list().filter((x) => x !== id))); }
+  remove(id) {
+    localStorage.setItem(this.key(), JSON.stringify(this.list().filter((x) => x !== id)));
+  }
 };
 
 /* ---------- СООБЩЕНИЯ ---------- */
@@ -237,7 +286,7 @@ const LocalMessages = {
   }
 };
 
-/* ---------- ДЕМО-АККАУНТ ---------- */
+/* демо-аккаунт */
 (function seedUsers() {
   const list = LocalUsers.list();
   const del = LocalUsers.deleted();
@@ -248,16 +297,20 @@ const LocalMessages = {
       email: "admin@ou.ru", pass: hashPass("admin"),
       dept: null, deg: null, roles: ["adm"],
       note: "Администратор Open University", years: 0, balance: 0,
-      interests: [], experience: "Полный доступ ко всем данным."
+      interests: [], experience: "Полный доступ ко всем данным: пользователи, кафедры, публикации."
     });
   }
 })();
 
-/* ---------- ТЕКУЩИЙ ПОЛЬЗОВАТЕЛЬ ---------- */
-let USER = {
-  guest: true, id: -1, name: "Гость", short: "Гость",
-  dept: null, deg: null, roles: [], interests: [], experience: "", note: ""
-};
+(function purgeAndreev() {
+  const ex = LocalUsers.list().find((u) => u.id === 0 || u.email === 'andreev@ou.ru');
+  if (ex) { LocalUsers.remove(ex.id); return; }
+  const d = LocalUsers.deleted();
+  if (!d.some((x) => x.id === 0 || x.email === 'andreev@ou.ru')) {
+    d.push({ id: 0, email: 'andreev@ou.ru' });
+    localStorage.setItem(LocalUsers.DEL, JSON.stringify(d));
+  }
+})();
 
 function refreshCurrentUser() {
   const u = LocalUsers.byId(Session.get());
@@ -270,9 +323,9 @@ function refreshCurrentUser() {
 }
 
 (function resolveUser() {
-  const u = LocalUsers.byId(Session.get());
+  let u = LocalUsers.byId(Session.get());
   if (u) {
-    if (u.balance == null) LocalUsers.update(u.id, { balance: 10 });
+    if (u.balance == null) { LocalUsers.update(u.id, { balance: 10 }); }
     refreshCurrentUser();
   }
 })();
@@ -381,7 +434,9 @@ const Store = {
         .map((d) => (ovrD[d.n] ? Object.assign({}, d, ovrD[d.n]) : d));
 
       this.people = people.concat(LocalUsers.list().map((u) => {
-        const c = Object.assign({}, u); delete c.pass; return c;
+        const c = Object.assign({}, u);
+        delete c.pass;
+        return c;
       })).filter((p) => !userGone(p))
         .map((p) => (ovrPeople[p.id] ? Object.assign({}, p, ovrPeople[p.id]) : p));
 
@@ -412,6 +467,7 @@ const Store = {
           if (pub) pub.status = r._result;
         }
       });
+
       return this;
     }));
   }
