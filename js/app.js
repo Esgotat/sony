@@ -452,7 +452,15 @@ function initHome() {
 <div class="stamp"><b>${nw}</b><span>работ</span></div>
 </div>
 </section>
+<div class="legend" aria-label="Обозначения" style="margin:24px 0">
+<span class="lg"><i class="b b-d">Д</i>доктор наук</span>
+<span class="lg"><i class="b b-k">К</i>кандидат наук</span>
+<span class="lg"><i class="b b-a">А</i>аспирант</span>
+<span class="lg"><i class="b b-ch">Ч</i>человек</span>
+</div>
 <section class="home-block" id="homeDepts"></section>`;
+
+
 
     /* ---------- карточки кафедр ---------- */
     const FAC_COLOR = {
@@ -1727,7 +1735,7 @@ function initAdminStats() {
     makeChart($('#ch-people-deg'), {
         type: 'doughnut',
         data: {
-            labels: ['Доктора наук', 'Кандидаты наук', 'Аспиранты', 'Без степени'],
+            labels: ['Доктор наук', 'Кандидат наук', 'Аспирант', 'Без степени'],
             datasets: [{
                 data: [byDeg.d, byDeg.k, byDeg.a, byDeg.none],
                 backgroundColor: [p.bd, p.bk, p.ba, p.bch],
