@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Вход — Open University</title>
+<meta name="description" content="Вход и регистрация в Open University.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="auth">
+
+<header class="hd" id="hd"></header>
+
+<div class="frame">
+  <nav class="subnav" id="subnav" aria-label="Разделы"></nav>
+
+  <main class="content">
+    <div class="page-head">
+      <h1 class="page-title">Аккаунт</h1>
+    </div>
+
+    <div class="auth-wrap">
+      <form id="loginForm" class="pub-form auth-form">
+        <h2 class="form-sub">Вход</h2>
+        <label class="fld"><span>Email</span><input id="lEmail" type="email" required></label>
+        <label class="fld"><span>Пароль</span><input id="lPass" type="password" required></label>
+        <div class="form-actions"><button class="file-btn" type="submit">Войти</button></div>
+        <p class="person-years">Нет аккаунта? <a href="login.html?mode=reg">Зарегистрируйтесь</a></p>
+        <p class="conflict-note">Демо-аккаунты: andreev@ou.ru · 1234 / admin@ou.ru · admin</p>
+      </form>
+
+      <form id="regForm" class="pub-form auth-form" hidden>
+        <h2 class="form-sub">Регистрация</h2>
+        <label class="fld"><span>ФИО (фамилия имя отчество)</span><input id="rName" required placeholder="Иванов Иван Иванович"></label>
+        <div class="fld-row">
+          <label class="fld"><span>Email</span><input id="rEmail" type="email" required></label>
+          <label class="fld"><span>Пароль</span><input id="rPass" type="password" required minlength="4"></label>
+        </div>
+        <div class="fld-row">
+          <div class="fld">
+            <span>Кафедра (необязательно)</span>
+            <select class="select" id="rDept">
+              <option value="">— без кафедры —</option>
+            </select>
+          </div>
+          <div class="fld">
+            <span>Степень (необязательно)</span>
+            <select class="select" id="rDeg">
+              <option value="">— без степени —</option>
+              <option value="d">Доктор наук</option>
+              <option value="k">Кандидат наук</option>
+              <option value="a">Аспирант</option>
+            </select>
+          </div>
+        </div>
+        <label class="fld"><span>Должность (необязательно)</span><input id="rNote" placeholder="Доцент"></label>
+        <div class="fld"><span>Роли в университете (необязательно)</span><div class="check-list" id="rRoles"></div></div>
+        <div class="form-actions"><button class="file-btn" type="submit">Создать аккаунт</button></div>
+        <p class="person-years">Уже есть аккаунт? <a href="login.html">Войти</a></p>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
