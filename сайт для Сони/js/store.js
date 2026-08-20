@@ -76,7 +76,7 @@ function applyMessageDeletes(state) {
 
 /* ---------- ОБЛАКО ---------- */
 const CloudSync = {
-  url: '/.netlify/functions/sync',
+  url: '/api/sync',
   get ok() { return this.url.length > 3; },
   silent: false,
   timer: null,
@@ -384,7 +384,7 @@ const LocalCheckReviews = {
 
 /* ---------- ФАЙЛЫ В ОБЛАКЕ ---------- */
 const CloudFiles = {
-  base: '/.netlify/functions/sync',
+  base: '/api/sync',
   upload(key, data) {
     try {
       fetch(this.base + '?file=' + encodeURIComponent(key), {
