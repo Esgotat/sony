@@ -1,5 +1,0 @@
-[
-  { "id": 1, "pub": 1, "lang": "Английский", "author": 15, "text": "On the convergence of a class of nonlinear series. Abstract: sufficient conditions for the convergence of nonlinear series with variable signs are proved; the results generalize the classical d'Alembert's test." },
-  { "id": 2, "pub": 2, "lang": "Английский", "author": 15, "text": "Knot invariants and applications in cryptography. Abstract: a series of new knot invariants is constructed and their application in linking-based cryptographic protocols is shown." },
-  { "id": 3, "pub": 7, "lang": "Немецкий",   "author": 15, "text": "Laborpraktikum zur Quantenoptik. Abstract: Das aktualisierte Laborpraktikum zur Quantenoptik mit zwölf Arbeiten wird beschrieben." }
-]
