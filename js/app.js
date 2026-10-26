@@ -148,9 +148,11 @@ function personCard(p) {
   const roles = (p.roles || []).map((r) => ROLES[r]
     ? `<span class="stat"><span class="b b-${r}" style="background:${ROLE_BG[r] || '#2D6A4F'}">${ROLES[r].letter}</span></span>`
     : '').join('');
-  const avIcon = (window.OU_icons && OU_icons.avatarSVG)
-    ? OU_icons.avatarSVG(p.name, r0, 96)
-    : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`;
+  const avIcon = p.photo
+    ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
+    : ((window.OU_icons && OU_icons.avatarSVG)
+        ? OU_icons.avatarSVG(p.name, r0, 96)
+        : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`);
   return `
   <a class="card card-link person-card" href="profile.html?id=${p.id}">
     <div class="card-emoji" aria-hidden="true">
@@ -201,7 +203,7 @@ function deptDetailHTML(d) {
     const creator = d.createdBy != null ? esc(d.creatorName || ('пользователь №' + d.createdBy)) : 'база университета';
     return `
 <div>
-<div class="dept-emoji">${(window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(d) : ''}</div>
+<div class="dept-emoji">${d.photo ? '<img class="dept-photo" src="' + esc(d.photo) + '" alt="Фото кафедры">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(d) : '')}</div>
 <span class="fac">${esc(d.f)}</span>
 <h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
 <p class="dept-desc">${esc(d.x || '')}</p>
@@ -224,9 +226,11 @@ function deptDetailHTML(d) {
 
 function profileHTML(person, extraRight) {
 const r0 = (person.roles && person.roles[0]) || 'res';
-const av = (window.OU_icons && OU_icons.avatarSVG)
+const av = person.photo
+    ? '<img class="avatar avatar-big avatar-photo" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">'
+    : ((window.OU_icons && OU_icons.avatarSVG)
     ? '<div class="avatar avatar-big svg">' + OU_icons.avatarSVG(person.name, r0, 80) + '</div>'
-    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>';
+    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>');
 return `
 <div class="profile-left">
 ${av}
@@ -495,7 +499,7 @@ function deptCardHTML(c) {
   return `
   <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
     <div class="card-emoji" aria-hidden="true">
-      ${(window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : ''}
+      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
@@ -525,25 +529,23 @@ function deptCardHTML(c) {
 // ============================================================
 function initPeople() {
     const pre = params.get('role');
-    const isFriendsMode = params.get('mode') === 'friends' ||
-        (location.pathname.indexOf('znakomye') !== -1 && !params.get('role'));
+    /* страница «Знакомые» всегда показывает только список знакомых; галочки переключения нет.
+       Коллег по роли можно посмотреть со ссылками вида znakomye.html?role=res */
+    const isFriendsMode = location.pathname.indexOf('znakomye') !== -1 &&
+        (params.get('mode') === 'friends' || !params.get('role'));
     const state = {
         role: ['rev', 'res', 'sup', 'trn', 'adm'].includes(pre) ? pre : 'Все',
-        friendsOnly: isFriendsMode
+        friendsOnly: isFriendsMode && !USER.guest
     };
 
     if (!USER.guest && !$('#addFriendBar')) {
         $('.filters-row').insertAdjacentHTML('afterend',
             '<div class="member-bar add-friend-bar" id="addFriendBar">' +
-            '<label class="switch"><input type="checkbox" id="friendsToggle"' + (isFriendsMode ? ' checked' : '') + '> Только знакомые</label>' +
+            '<span class="member-note">Добавить в знакомые:</span>' +
             '<div class="ac-wrap add-friend-wrap">' +
             '<input type="text" id="addFriendInput" class="ac-input" placeholder="Найти коллегу по ФИО…" autocomplete="off">' +
             '<div class="ac-drop" id="addFriendDrop" hidden></div>' +
             '</div></div>');
-        $('#friendsToggle').addEventListener('change', function () {
-            state.friendsOnly = this.checked;
-            render();
-        });
         bindAutocomplete(
             $('#addFriendInput'), $('#addFriendDrop'),
             (Store.people || []).filter((x) => x.id !== USER.id),
@@ -554,7 +556,7 @@ function initPeople() {
 
     function render() {
         let list;
-        if (state.friendsOnly && !USER.guest) {
+        if (state.friendsOnly) {
             list = LocalFriends.list()
                 .map((id) => (Store.people || []).find((p) => p.id === id))
                 .filter(Boolean);
@@ -594,7 +596,12 @@ function initPeople() {
 // ============================================================
 function initProfile() {
     const id = +params.get('id');
-    const person = id === USER.id ? effectiveUser() : (Store.people || []).find((x) => x.id === id);
+    let person = id === USER.id ? effectiveUser() : (Store.people || []).find((x) => x.id === id);
+    /* фото профиля хранится в LocalProfile/LocalUsers — подтягиваем его и для «базовых» людей */
+    if (person && id === USER.id && !person.photo) {
+        const lu = LocalUsers.byId(person.id);
+        if (lu && lu.photo) person.photo = lu.photo;
+    }
     if (!person) { $('#profile').innerHTML = '<div class="empty">Страница не найдена.</div>'; return; }
     const isOwner = person.id === USER.id;
     if (isOwner && USER.guest) { location.href = 'login.html'; return; }
@@ -608,7 +615,39 @@ function initProfile() {
 
     if (isOwner && !$('#resetBtn')) {
         $('#ownerBar').insertAdjacentHTML('beforeend',
+            ' <button class="edit-btn" id="photoBtn" type="button">Фото профиля</button>' +
+            ' <input type="file" id="photoInput" accept="image/*" hidden>' +
             ' <button class="edit-btn" id="resetBtn" type="button">Сбросить правки</button>');
+        /* загрузка фото профиля: сжимается до 256px и хранится как dataURL */
+        $('#photoBtn').addEventListener('click', () => $('#photoInput').click());
+        $('#photoInput').addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            e.target.value = '';
+            if (!f) return;
+            if (!/^image\//.test(f.type)) { alert('Нужен файл изображения (JPG/PNG).'); return; }
+            if (f.size > 8 * 1024 * 1024) { alert('Файл больше 8 МБ.'); return; }
+            const btn = $('#photoBtn');
+            btn.disabled = true; btn.textContent = 'Обработка…';
+            const done = (dataUrl) => {
+                LocalProfile.save({ photo: dataUrl });
+                person.photo = dataUrl;
+                if (LocalUsers.byId(person.id)) LocalUsers.update(person.id, { photo: dataUrl });
+                try { window.dispatchEvent(new Event('ou:data')); } catch (err) {}
+                render();
+            };
+            if (window.OU_icons && OU_icons.readImage) {
+                OU_icons.readImage(f, 256, (err, dataUrl) => {
+                    if (err) { alert('Не удалось прочитать изображение.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
+                    try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
+                    catch (err2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
+                    done(dataUrl);
+                });
+            } else {
+                const rd = new FileReader();
+                rd.onload = () => done(rd.result);
+                rd.readAsDataURL(f);
+            }
+        });
         $('#resetBtn').addEventListener('click', () => {
             if (confirm('Сбросить все правки вашего профиля?')) { LocalProfile.reset(); location.reload(); }
         });
@@ -817,6 +856,9 @@ function initDeptPage() {
             ((window.OU_icons && OU_icons.iconSelectHTML) ? OU_icons.iconSelectHTML('edIcon', d.ic || d.e || '') : '') +
             '</label>' +
             '<label class="fld"><span>Описание</span><input id="edDesc"></label></div>' +
+            '<div class="fld-row"><label class="fld"><span>Фото кафедры (необязательно)</span>' +
+            '<input type="file" id="edPhoto" accept="image/*"></label>' +
+            '<label class="fld chk-fld"><span>&nbsp;</span><label class="switch"><input type="checkbox" id="edPhotoClear"> Удалить фото</label></label></div>' +
             '<div class="form-actions"><button class="file-btn" type="submit">Сохранить</button> ' +
             '<button class="edit-btn" id="edCancel" type="button">Отмена</button></div></form>');
         $('#edFac').innerHTML = FAC.map((f) => '<option' + (f === d.f ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
@@ -831,8 +873,21 @@ function initDeptPage() {
                 patch.ic = window.OU_icons ? OU_icons.normalizeDept({ ic: icEl.value, f: patch.f }).ic : icEl.value;
                 delete patch.e; /* эмодзи больше не используется */
             }
-            LocalDepts.update(d.n, patch);
-            location.reload();
+            const savePatch = () => { LocalDepts.update(d.n, patch); location.reload(); };
+            const clearChk = $('#edPhotoClear');
+            if (clearChk && clearChk.checked) { patch.photo = null; savePatch(); return; }
+            const phEl = $('#edPhoto');
+            const pf = phEl && phEl.files[0];
+            if (pf) {
+                if (!/^image\//.test(pf.type)) { alert('Нужен файл изображения.'); return; }
+                OU_icons.readImage(pf, 320, (err, dataUrl) => {
+                    if (err) { alert('Не удалось прочитать изображение.'); return; }
+                    try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
+                    catch (e2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); return; }
+                    patch.photo = dataUrl;
+                    savePatch();
+                });
+            } else savePatch();
         });
     }
     const ppl = Store.people.filter((p) => p.dept === d.n);
@@ -1517,6 +1572,7 @@ ${list.map((u) => `<tr data-uid="${u.id}"><td>${u.id}</td><td><a href="profile.h
 <label class="fld"><span>Направление *</span><select class="select" id="ndaFac">${FAC.map((f) => '<option>' + esc(f) + '</option>').join('')}</select></label></div>
 <div class="fld-row"><label class="fld"><span>Иконка кафедры</span>${(window.OU_icons && OU_icons.iconSelectHTML) ? OU_icons.iconSelectHTML('ndaIcon', '') : '<select id="ndaIcon"></select>'}</label>
 <label class="fld"><span>Описание</span><input id="ndaDesc"></label></div>
+<div class="fld-row"><label class="fld"><span>Фото кафедры (необязательно)</span><input type="file" id="ndaPhoto" accept="image/*"></label></div>
 <div class="form-actions"><button class="file-btn" type="submit">Создать</button></div></form>
 <h2 class="sub-title">Кафедры · ${all.length}</h2>
 <table class="admin-table"><thead><tr><th>N</th><th>Название</th><th>Создатель</th><th>Действия</th></tr></thead><tbody>
@@ -1526,8 +1582,13 @@ ${all.map((d) => `<tr><td>${d.n}</td><td>${esc(d.t)}</td><td>${d.createdBy != nu
         $('#newDeptAdmin').addEventListener('submit', (e) => {
             e.preventDefault(); const name = $('#ndaName').value.trim(); if (!name) return;
             const n = LocalDepts.nextN(Math.max(...(Store.depts || []).map((d) => d.n)));
-            LocalDepts.add({ n: n, f: $('#ndaFac').value, ic: (window.OU_icons && $('#ndaIcon')) ? OU_icons.normalizeDept({ ic: $('#ndaIcon').value, f: $('#ndaFac').value }).ic : ($('#ndaIcon') ? $('#ndaIcon').value : 'cap'), t: name, x: $('#ndaDesc').value.trim(), d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name });
-            renderDepts();
+            const rec = { n: n, f: $('#ndaFac').value, ic: (window.OU_icons && $('#ndaIcon')) ? OU_icons.normalizeDept({ ic: $('#ndaIcon').value, f: $('#ndaFac').value }).ic : ($('#ndaIcon') ? $('#ndaIcon').value : 'cap'), t: name, x: $('#ndaDesc').value.trim(), d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name };
+            const pfEl = $('#ndaPhoto');
+            const pf = pfEl && pfEl.files[0];
+            const finish = () => { LocalDepts.add(rec); renderDepts(); };
+            if (pf && window.OU_icons) {
+                OU_icons.readImage(pf, 320, (err, dataUrl) => { if (!err) rec.photo = dataUrl; finish(); });
+            } else finish();
         });
         $('#tab-depts').querySelectorAll('button[data-del-d]').forEach((btn) => {
             btn.addEventListener('click', () => { if (confirm('Удалить кафедру?')) { LocalDepts.remove(+btn.dataset.delD); renderDepts(); } });
@@ -2174,7 +2235,7 @@ function cardHTML(c) {
   return `
   <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}" title="${esc(c.x || '')}">
     <div class="card-emoji" aria-hidden="true">
-      ${(window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : ''}
+      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>

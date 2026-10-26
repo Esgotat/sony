@@ -126,12 +126,37 @@ function avatarSVG(name, role, size) {
     'font-family="Inter,Arial,sans-serif" font-weight="700" font-size="' + fs + '">' + esc(initialsOf(name)) + '</text></svg>';
 }
 
+/* ---------- ФОТО (сжатие перед записью в хранилище) ---------- */
+function readImage(file, maxSide, cb) {
+  if (!file || !/^image\//.test(file.type)) { cb(new Error('not an image')); return; }
+  var reader = new FileReader();
+  reader.onerror = function () { cb(reader.error || new Error('read error')); };
+  reader.onload = function () {
+    var img = new Image();
+    img.onerror = function () { cb(new Error('bad image')); };
+    img.onload = function () {
+      try {
+        var side = Math.min(maxSide || 320, Math.max(img.width, img.height));
+        var k = side / Math.max(img.width, img.height);
+        var w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+        var cv = document.createElement('canvas');
+        cv.width = w; cv.height = h;
+        cv.getContext('2d').drawImage(img, 0, 0, w, h);
+        cb(null, cv.toDataURL('image/jpeg', 0.82));
+      } catch (e) { cb(e); }
+    };
+    img.src = reader.result;
+  };
+  reader.readAsDataURL(file);
+}
+
 window.OU_icons = {
   icon: icon,
   deptIconHTML: deptIconHTML,
   iconSelectHTML: iconSelectHTML,
   normalizeDept: normalizeDept,
   avatarSVG: avatarSVG,
+  readImage: readImage,
   initialsOf: initialsOf,
   names: Object.keys(P),
   opts: DEPT_ICON_OPTS,
