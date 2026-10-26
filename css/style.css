@@ -42,10 +42,10 @@ font: 800 13px/1 var(--font-m);
 flex: none;
 background: transparent;
 }
-.b-d  { color: #2D6A4F; }
-.b-k  { color: #B8860B; }
-.b-a  { color: #457B9D; }
-.b-ch { color: #C41E3A; }
+.b-d  { background: rgba(45,106,79,.14); color: #2D6A4F; }
+.b-k  { background: rgba(184,134,11,.16); color: #B8860B; }
+.b-a  { background: rgba(69,123,157,.16); color: #457B9D; }
+.b-ch { background: rgba(196,30,58,.14); color: #C41E3A; }
 .b-res { background: var(--bk); color: #FFF; }
 .b-rev { background: var(--bd); color: #FFF; }
 .b-sup { background: var(--ba); color: #FFF; }
@@ -61,7 +61,7 @@ position: sticky;
 top: 0;
 z-index: 100;
 isolation: isolate;
-padding: max(18px, env(safe-area-inset-top)) 28px 14px;
+padding: max(10px, env(safe-area-inset-top)) 28px 8px;
 border-bottom: 1px solid var(--line);
 flex-wrap: wrap;
 position: relative;
@@ -94,10 +94,20 @@ padding: 10px 16px;
 border-bottom: 2px solid transparent;
 transition: all 0.2s ease;
 }
-/* underline через box-shadow: не «съедает» высоту и не пересекается
-   с соседними строками при переносе навигации на мобильных */
-.hd-nav a:hover { box-shadow: inset 0 -2px 0 var(--ink); color: var(--accent); }
-.hd-nav a.on { box-shadow: inset 0 -2px 0 var(--accent); font-weight: 700; }
+/* underline: тонкая линия через ::after — не меняет высоту кнопки
+   и не пересекается с соседними строками при переносе навигации */
+.hd-nav a, .hd-dd-btn { position: relative; }
+.hd-nav a:hover { color: var(--accent); }
+.hd-nav a.on { font-weight: 700; color: var(--accent); }
+.hd-nav a:hover::after, .hd-nav a.on::after,
+.hd-dd-btn:hover::after, .hd-dd-btn.on::after {
+content: "";
+position: absolute;
+left: 12px; right: 12px; bottom: 3px;
+height: 2px;
+background: currentColor;
+border-radius: 2px;
+}
 .hd-nav a.me-page {
 background: var(--dark);
 color: var(--paper);
@@ -203,7 +213,7 @@ transition: all 0.15s ease;
 .dd-menu a:last-child { border-bottom: none; }
 .dd-menu a:hover { background: var(--bg-2); color: var(--accent); }
 
-/* ---------- БЕЙДЖИ УВЕДОМЛЕНИЙ (красный квадратик справа от текста строки) ---------- */
+/* ---------- БЕЙДЖИ УВЕДОМЛЕНИЙ (красный квадратик у правого края строки) ---------- */
 .dd-badge, .hd-badge {
 flex: none;
 margin-left: auto;
@@ -219,8 +229,15 @@ color: #FFF;
 font: 800 11px/1 var(--font-m);
 border-radius: 4px;
 }
+/* в выпадашках («Кабинет», подменю) — вплотную к правому краю секции */
+.dd-menu a, .hd-dd-menu a { padding-right: 12px; }
+.dd-menu a .dd-badge, .hd-dd-menu a .dd-badge { margin-left: auto; }
 .dd-badge[hidden], .hd-badge[hidden] { display: none !important; }
-.hd-badge { margin-left: 7px; vertical-align: middle; }
+/* в кнопках шапки/подменю бейдж прижат к правому краю самой кнопки */
+.hd-nav > a, .hd-dd-btn, .dd-btn { display: inline-flex; align-items: center; gap: 7px; }
+.hd-nav > a .hd-badge, .hd-dd-btn .hd-badge, .dd-btn .dd-badge { margin-left: auto; }
+/* у пунктов subnav («Кафедры» и т.п.) бейдж — справа от текста с небольшим зазором */
+.subnav .dd-btn .dd-badge, .subnav .hd-badge { margin-left: 8px; }
 
 /* ---------- КОНТЕНТ ---------- */
 .content { padding: 32px 28px 48px; }
@@ -264,6 +281,11 @@ height: 28px;
 font-size: 14px;
 font-weight: 800;
 }
+/* в легенде квадратики всегда с цветом (перебивают transparent-фолбэк) */
+.legend .b.b-d  { background: rgba(45,106,79,.14); color: #2D6A4F; }
+.legend .b.b-k  { background: rgba(184,134,11,.16); color: #B8860B; }
+.legend .b.b-a  { background: rgba(69,123,157,.16); color: #457B9D; }
+.legend .b.b-ch { background: rgba(196,30,58,.14); color: #C41E3A; }
 
 /* ---------- ФИЛЬТРЫ ---------- */
 .filters-row {
@@ -394,10 +416,10 @@ display: inline-grid;
 place-items: center;
 }
 /* цветные квадратики статусов НЕ перекрываются прозрачным фоном */
-.stat .b.b-d  { background: transparent; color: #2D6A4F; }
-.stat .b.b-k  { background: transparent; color: #B8860B; }
-.stat .b.b-a  { background: transparent; color: #457B9D; }
-.stat .b.b-ch { background: transparent; color: #C41E3A; }
+.stat .b.b-d  { background: rgba(45,106,79,.14); color: #2D6A4F; }
+.stat .b.b-k  { background: rgba(184,134,11,.16); color: #B8860B; }
+.stat .b.b-a  { background: rgba(69,123,157,.16); color: #457B9D; }
+.stat .b.b-ch { background: rgba(196,30,58,.14); color: #C41E3A; }
 .stat .b.b-res { background: var(--bk); color: #FFF; }
 .stat .b.b-rev { background: var(--bd); color: #FFF; }
 .stat .b.b-sup { background: var(--ba); color: #FFF; }
@@ -635,7 +657,7 @@ place-items: center;
 
 /* ---------- АДАПТИВ ---------- */
 @media (max-width: 900px) {
-.hd { padding: max(14px, env(safe-area-inset-top)) 18px 10px; gap: 10px; }
+.hd { padding: max(10px, env(safe-area-inset-top)) 18px 8px; gap: 10px; }
 .brand-line1, .brand-line2 { font-size: 18px; }
 .hd-nav { margin-left: 0; width: 100%; order: 3; gap: 0; flex-wrap: wrap; }
 .hd-nav a { padding: 8px 10px; font-size: 10px; }
@@ -702,7 +724,13 @@ border-bottom: 1px dashed var(--line);
 .dd-menu a:last-child { border-bottom: none; }
 /* --- «Кабинет» в шапке: тоже аккордеон --- */
 .hd-nav { gap: 0; }
-.hd-nav > a { min-height: 40px; display: inline-flex; align-items: center; }
+.hd-nav > a { min-height: 40px; width: 100%; border-bottom: 1px solid var(--line); padding: 10px 6px; font-size: 12px; }
+.hd-nav > a.me-page, .hd-nav > a.me-link { justify-content: space-between; }
+.hd-nav > a:last-of-type { border-bottom: none; }
+/* на телефоне линия-подчёркивание не нужна — есть разделители строк */
+.hd-nav a:hover::after, .hd-nav a.on::after,
+.hd-dd-btn:hover::after, .hd-dd-btn.on::after { content: none; }
+.hd-nav a.on { color: var(--accent); }
 .hd-dd { width: 100%; order: 5; border-top: 1px solid var(--line); }
 .hd-dd-btn {
 display: flex;

@@ -120,7 +120,8 @@ window.OU_theme = { apply: applyTheme, refresh: () => { const p = themePref(); a
 const links = [];
 if (!USER.guest) links.push({ href: 'profile.html?id=' + USER.id, label: 'Моя страница', id: 'me', extra: 'me-page' });
 links.push({ href: 'index.html', label: 'Главная', id: 'home' });
-links.push({ href: 'znakomye.html', label: 'Знакомые', id: 'people' });
+/* «Знакомые» ведёт на личный список знакомых (mode=friends), а не на всех коллег */
+links.push({ href: USER.guest ? 'znakomye.html' : 'znakomye.html?mode=friends', label: 'Знакомые', id: 'people' });
 links.push({ href: 'moya-kafedra.html', label: 'Моя кафедра', id: 'dept' });
 const cabinetOn = ['pubs', 'req', 'chats', 'complaint'].includes(active);
 const unreadComplaints = (() => {
@@ -148,7 +149,7 @@ ${!USER.guest ? `
 <li><a href="complaint.html"><span class="dd-label">Написать администрации</span><span class="dd-badge" data-bd="cmp" hidden></span></a></li>
 </ul>
 </div>` : ''}
-${isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель${unreadComplaints ? ' <span class="hd-badge">' + unreadComplaints + '</span>' : ''}</a>` : ''}
+${isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель<span class="hd-badge" data-bd="admCmp" hidden></span></a>` : ''}
 ${USER.guest
     ? '<a href="login.html" class="me-link">Войти</a>'
     : '<a href="#" class="me-link" id="logoutBtn">Выйти</a>'}
@@ -199,8 +200,9 @@ document.getElementById('subnav').innerHTML = `
 
 
 /* ---------- ТАЧ-АККОРДЕОНЫ (шапка + подменю) ----------
-   На десктопе меню раскрываются по наведению (CSS), на телефоне — только тапом:
-   класс .open вешает/снимает этот код. Повторный тап по кнопке ведёт на раздел. */
+   На десктопе меню раскрываются по наведению (CSS), на телефоне — тапом.
+   Тап по названию раздела («Кафедры», «Публикации», «Коллеги», «Запросы»)
+   ВСЕГДА ведёт на страницу раздела; для раскрытия списка служит шеврон ▾. */
 const TOUCH = matchMedia('(hover: none)').matches || innerWidth <= 640;
 function initDropdown(rootSel, wrapCls, btnCls) {
     const wraps = Array.prototype.slice.call(document.querySelectorAll(rootSel + ' .' + wrapCls));
@@ -215,23 +217,26 @@ function initDropdown(rootSel, wrapCls, btnCls) {
     wraps.forEach((wrap) => {
         const btn = wrap.querySelector('.' + btnCls);
         if (!btn) return;
-        /* на десктопе меню раскрывается по наведению (CSS), клик ведёт на раздел */
-        if (!TOUCH) return;
-        /* мобильные: первый тап — раскрыть/свернуть список,
-           повторный тап по раскрытой кнопке — перейти на страницу раздела */
+        /* мобильные: клик по кнопке — переход на страницу раздела;
+           тап по шеврону ▾ — раскрыть/свернуть список */
         btn.addEventListener('click', (e) => {
             e.preventDefault();
-            const wasOpen = wrap.classList.contains('open');
-            closeAll(wrap);
-            if (!wasOpen) {
-                wrap.classList.add('open');
-                btn.setAttribute('aria-expanded', 'true');
-            } else if (btn.dataset.href) {
-                location.href = btn.dataset.href; // второй тап — перейти в раздел
-            } else {
-                wrap.classList.remove('open');
-                btn.setAttribute('aria-expanded', 'false');
+            const onCaret = !!(e.target && e.target.closest('.caret'));
+            if (onCaret || TOUCH) {
+                if (onCaret || !btn.dataset.href) {
+                    const wasOpen = wrap.classList.contains('open');
+                    closeAll(wrap);
+                    if (!wasOpen) {
+                        wrap.classList.add('open');
+                        btn.setAttribute('aria-expanded', 'true');
+                    } else {
+                        btn.setAttribute('aria-expanded', 'false');
+                    }
+                    return;
+                }
+                closeAll(wrap);
             }
+            if (btn.dataset.href) location.href = btn.dataset.href;
         });
     });
     document.addEventListener('click', (e) => {
@@ -248,18 +253,25 @@ function initDropdown(rootSel, wrapCls, btnCls) {
 }
 initDropdown('#subnav', 'dd', 'dd-btn');
 initDropdown('.hd-nav', 'hd-dd', 'hd-dd-btn');
-/* клик по кнопке раздела: на тач-устройствах первый тап открывает список,
-   повторный тап ведёт на страницу раздела; на десктопе — переход по клику */
-const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html', 'requests.html'];
-document.querySelectorAll('#subnav .dd .dd-btn').forEach((b, idx) => { b.dataset.href = DD_HREFS[idx] || ''; });
-const cabBtn = document.querySelector('.hd-dd-btn');
-if (cabBtn) cabBtn.dataset.href = 'moi-publikacii.html';
-/* клик по кнопке раздела («Кафедры», «Публикации», «Коллеги», «Запросы») всегда
-   ведёт на соответствующую страницу; меню открывается по наведению (десктоп)
-   или удержанием/вторым тапом (мобильные — класс .open в initDropdown) */
-document.querySelectorAll('#subnav .dd .dd-btn').forEach((b) => {
-    if (b.dataset.href) b.addEventListener('click', () => { location.href = b.dataset.href; });
-});
+    /* раскрываемые списки подменю: «Кафедры», «Публикации», «Коллеги», «Запросы» */
+    const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html', 'requests.html'];
+    document.querySelectorAll('#subnav .dd').forEach((w, idx) => {
+        const b = w.querySelector('.dd-btn');
+        if (b) b.dataset.href = DD_HREFS[idx] || '';
+        const ul = w.querySelector('.dd-menu');
+        if (!ul) return;
+        const bdKey = { kafedry: 'depts', publications: 'pubs', znakomye: 'ppl', requests: 'reqs' }[DD_HREFS[idx].split('.')[0]];
+        ul.querySelectorAll('li > a').forEach((a) => {
+            if (a.querySelector('.dd-badge')) return;
+            const badge = document.createElement('span');
+            badge.className = 'dd-badge';
+            badge.hidden = true;
+            if (bdKey) badge.setAttribute('data-bd', bdKey);
+            a.appendChild(badge);
+        });
+    });
+    const cabBtn = document.querySelector('.hd-dd-btn');
+    if (cabBtn) cabBtn.dataset.href = 'moi-publikacii.html';
 
 /* ---------- БЕЙДЖИ УВЕДОМЛЕНИЙ (чаты / запросы / публикации) ---------- */
 window.OU_badges = (function () {
@@ -269,40 +281,40 @@ window.OU_badges = (function () {
         el.hidden = !(n > 0);
         el.classList.toggle('vis', n > 0);
     }
+    /* Счётчики считаются ТОЛЬКО по реальным данным Store/Local* —
+       никаких случайных чисел. */
     function unreadComplaintsForUser() {
-        /* реальные данные: ответы админа на мои жалобы + мои жалобы без ответа */
         if (typeof USER === 'undefined' || USER.guest) return 0;
-        let n = 0;
-        try { n += Notifications.unreadComplaints(); } catch (e) {}
+        try { return Notifications.unreadComplaints(); } catch (e) { return 0; }
+    }
+    function unreadForAdmin() {
+        /* реальные непрочитанные жалобы в адрес администрации */
+        let uc = 0;
         try {
-            if (typeof LocalComplaints !== 'undefined') {
-                n += LocalComplaints.list().filter((c) => (c.by === USER.id || c.uid === USER.id) && !c.reply).length;
-            }
+            const list = (typeof LocalComplaints !== 'undefined')
+                ? LocalComplaints.list()
+                : (typeof Store !== 'undefined' && Store.state ? (Store.state.complaints || []) : []);
+            uc = list.filter((x) => !x.read && x.status !== 'closed').length;
         } catch (e) {}
-        return n;
+        return uc;
     }
     function refresh() {
-        if (typeof USER === 'undefined' || USER.guest || typeof Notifications === 'undefined') return;
+        if (typeof USER === 'undefined' || USER.guest) return;
         let c = 0, r = 0, p = 0;
         try { c = Notifications.unreadChats(); } catch (e) {}
         try { r = Notifications.unreadRequests(); } catch (e) {}
         try { p = Notifications.unreadPubs(); } catch (e) {}
         const cm = unreadComplaintsForUser();
-        set(document.querySelector('[data-bd="chats"]'), c);
-        set(document.querySelector('[data-bd="reqs"]'), r);
-        set(document.querySelector('[data-bd="pubs"]'), p);
-        set(document.querySelector('[data-bd="cmp"]'), cm);
+        /* все элементы с data-bd (в меню «Кабинета», в подменю разделов и у «Админ-панели») */
+        document.querySelectorAll('[data-bd]').forEach((el) => {
+            const key = el.getAttribute('data-bd');
+            const n = key === 'chats' ? c : key === 'reqs' ? r : key === 'pubs' ? p :
+                      key === 'cmp' ? cm : key === 'admCmp' ? unreadForAdmin() : 0;
+            set(el, n);
+        });
         const total = c + r + p + cm;
         const cab = document.getElementById('cabBadge');
         if (cab) { cab.textContent = total > 99 ? '99+' : total; cab.hidden = total === 0; }
-        const admlink = document.querySelector('.hd-nav a[href="admin.html"]');
-        if (admlink && typeof LocalComplaints !== 'undefined') {
-            let uc = 0;
-            try { uc = LocalComplaints.list().filter((x) => !x.read && x.status !== 'closed').length; } catch (e) {}
-            let b = admlink.querySelector('.hd-badge');
-            if (!b) { b = document.createElement('span'); b.className = 'hd-badge'; admlink.appendChild(b); }
-            b.textContent = uc > 99 ? '99+' : uc; b.hidden = !uc;
-        }
     }
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('#cabBtn');

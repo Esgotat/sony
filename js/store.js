@@ -562,7 +562,9 @@ const Store = {
       this.depts = depts
         .filter((d) => !d.tpl && !delD.includes(d.n))
         .concat(LocalDepts.list().filter((d) => !delD.includes(d.n)))
-        .map((d) => (ovrD[d.n] ? Object.assign({}, d, ovrD[d.n]) : d));
+        .map((d) => (ovrD[d.n] ? Object.assign({}, d, ovrD[d.n]) : d))
+        /* эмодзи больше не поддерживается: приводим к SVG-иконке */
+        .map((d) => (window.OU_icons && OU_icons.normalizeDept) ? OU_icons.normalizeDept(d) : d);
 
       this.people = people.concat(LocalUsers.list().map((u) => {
         const c = Object.assign({}, u);

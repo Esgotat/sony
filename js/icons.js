@@ -75,13 +75,36 @@ function deptIconHTML(dept, fallbackFac) {
   return '<span class="dept-ic">' + icon(name, 56) + '</span>';
 }
 
-/* select с вариантами иконок (единый для всех форм кафедры) */
+/* select с вариантами иконок (единый для всех форм кафедры).
+   Эмодзи не поддерживаются: значение — только имя SVG-иконки. */
 function iconSelectHTML(id, selected) {
   var cur = P[selected] ? selected : '';
+  if (!cur && selected) { /* старое значение-эмодзи -> подобрать svg */
+    var parts = String(selected).split(/\s+/);
+    for (var i = 0; i < parts.length; i++) {
+      if (EMOJI_TO_ICON[parts[i]]) { cur = EMOJI_TO_ICON[parts[i]]; break; }
+    }
+  }
+  if (!cur) cur = 'cap';
   return '<select id="' + id + '">' +
     DEPT_ICON_OPTS.map(function (o) {
       return '<option value="' + o[0] + '"' + (o[0] === cur ? ' selected' : '') + '>' + o[1] + '</option>';
     }).join('') + '</select>';
+}
+
+/* нормализация данных кафедры: убираем эмодзи из поля e, ставим ic */
+function normalizeDept(d) {
+  if (!d) return d;
+  if (d.e && !P[d.ic]) {
+    var parts = String(d.e).split(/\s+/), found = '';
+    for (var i = 0; i < parts.length; i++) {
+      if (EMOJI_TO_ICON[parts[i]]) { found = EMOJI_TO_ICON[parts[i]]; break; }
+    }
+    d.ic = found || FAC_ICON[d.f] || 'cap';
+  }
+  if (d.e && (!P[d.e] || EMOJI_TO_ICON[d.e])) { delete d.e; } /* эмодзи больше не храним */
+  if (!P[d.ic]) d.ic = FAC_ICON[d.f] || 'cap';
+  return d;
 }
 
 /* ---------- АВТАРЫ ЛЮДЕЙ (svg-инициалы вместо эмодзи) ---------- */
@@ -107,6 +130,7 @@ window.OU_icons = {
   icon: icon,
   deptIconHTML: deptIconHTML,
   iconSelectHTML: iconSelectHTML,
+  normalizeDept: normalizeDept,
   avatarSVG: avatarSVG,
   initialsOf: initialsOf,
   names: Object.keys(P),

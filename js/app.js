@@ -148,10 +148,13 @@ function personCard(p) {
   const roles = (p.roles || []).map((r) => ROLES[r]
     ? `<span class="stat"><span class="b b-${r}" style="background:${ROLE_BG[r] || '#2D6A4F'}">${ROLES[r].letter}</span></span>`
     : '').join('');
+  const avIcon = (window.OU_icons && OU_icons.avatarSVG)
+    ? OU_icons.avatarSVG(p.name, r0, 96)
+    : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`;
   return `
   <a class="card card-link person-card" href="profile.html?id=${p.id}">
     <div class="card-emoji" aria-hidden="true">
-      <span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>
+      ${avIcon}
     </div>
     <div class="card-bottom">
       <div class="card-stats">${roles}</div>
@@ -163,6 +166,20 @@ function personCard(p) {
   </a>`;
 }
 
+/* ---------- CC-ЛИЦЕНЗИИ (по принципу Creative Commons) ---------- */
+const CCL = {
+  'CC BY':        { label: 'CC BY — с указанием автора',                hint: 'Можно свободно копировать, распространять и адаптировать, даже в коммерческих целях, при указании авторства.' },
+  'CC BY-SA':     { label: 'CC BY-SA — с указанием автора, на тех же условиях', hint: 'Как CC BY, но производные работы обязаны распространяться под той же лицензией.' },
+  'CC BY-NC':     { label: 'CC BY-NC — с указанием автора, некоммерчески', hint: 'Свободное использование только для некоммерческих целей, с указанием авторства.' },
+  'CC BY-NC-SA':  { label: 'CC BY-NC-SA — некоммерчески, на тех же условиях', hint: 'Некоммерческое распространение и адаптация с указанием авторства и сохранением лицензии.' },
+  'CC BY-ND':     { label: 'CC BY-ND — с указанием автора, без производных', hint: 'Можно копировать и распространять только полный текст, без изменений, с указанием авторства.' },
+  'CC0':          { label: 'CC0 — общественное достояние',              hint: 'Полный отказ от авторских прав: любое использование без ограничений.' }
+};
+function licBadgeHTML(p) {
+    if (!p || !p.license || !CCL[p.license]) return '';
+    return '<span class="lic-badge" title="' + esc(CCL[p.license].hint) + '">' + esc(p.license) + '</span>';
+}
+
 function pubCard(p) {
     const st = STATUS[p.status] || STATUS.wait;
     const d = DEPT_BY_N[p.dept];
@@ -170,6 +187,7 @@ function pubCard(p) {
 <a class="card card-link pub-card" style="--stripe:${d ? FAC_COLOR[d.f] || 'var(--ink)' : 'var(--ink)'}" href="publication.html?id=${p.id}">
 <div class="card-top">
 <span class="num">${esc(p.year)}</span>
+${licBadgeHTML(p)}
 <span class="status ${st.cls}">${esc(st.short)}</span>
 </div>
 <h3 class="card-title">${esc(p.title)}</h3>
@@ -183,7 +201,7 @@ function deptDetailHTML(d) {
     const creator = d.createdBy != null ? esc(d.creatorName || ('пользователь №' + d.createdBy)) : 'база университета';
     return `
 <div>
-<div class="dept-emoji" aria-hidden="true">${esc(d.e || '🎓')}</div>
+<div class="dept-emoji">${(window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(d) : ''}</div>
 <span class="fac">${esc(d.f)}</span>
 <h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
 <p class="dept-desc">${esc(d.x || '')}</p>
@@ -216,7 +234,7 @@ ${av}
 <h2 class="profile-name">${esc(person.name)}</h2>
 <p class="person-note">${esc(person.note || '')}</p>
 <div class="card-stats">
-${(person.roles || []).map((r) => ROLES[r] ? `<span class="stat"><span class="b b-${r}">${ROLES[r].letter}</span>${esc(ROLES[r].label)}</span>` : '').join('')}
+${(person.roles || []).map((r) => ROLES[r] ? `<span class="stat"><span class="b b-${r}" style="background:${ROLES[r].color};color:#FFF">${ROLES[r].letter}</span>${esc(ROLES[r].label)}</span>` : '').join('')}
 </div>
 </div>
 </div>
@@ -471,19 +489,13 @@ function initHome() {
         'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
         'Психология': '#E76F51', 'Языки': '#264653'
     };
-    const icons = {
-        'Математика': '', 'Информатика': '💻', 'Физика': '⚛',
-        'Химия': '⚗', 'Гуманитарные науки': '📜', 'Экономика': '💼',
-        'Психология': '🧠', 'Языки': '🌍'
-    };
-
 function deptCardHTML(c) {
   const s = deptStats(c.n);
   const val = (v) => (v == null ? '—' : v);
   return `
   <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
     <div class="card-emoji" aria-hidden="true">
-      <span class="emoji-icon">${esc(c.e || icons[c.f] || '🎓')}</span>
+      ${(window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : ''}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
@@ -740,14 +752,22 @@ function initProfile() {
             render();
         });
         $('#createDeptBtn').addEventListener('click', () => { $('#newDeptForm').hidden = !$('#newDeptForm').hidden; });
+        if (window.OU_icons && OU_icons.iconSelectHTML) {
+            const icSel = $('#ndIcon');
+            if (icSel) icSel.outerHTML = OU_icons.iconSelectHTML('ndIcon', 'cap');
+        }
         $('#newDeptForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const name = $('#ndName').value.trim();
             if (!name || !can(USER, 'admin')) { alert('Создавать кафедры может только администратор.'); return; }
             const baseMax = Math.max(...(Store.depts || []).map((d) => d.n));
             const n = LocalDepts.nextN(baseMax);
+            const facVal = $('#ndFac').value;
+            const icEl = $('#ndIcon');
+            const icVal = (icEl && window.OU_icons) ? OU_icons.normalizeDept({ ic: icEl.value }).ic
+                : (icEl ? icEl.value : 'cap');
             LocalDepts.add({
-                n: n, f: $('#ndFac').value, e: $('#ndEmoji').value.trim() || '🎓',
+                n: n, f: facVal, ic: icVal,
                 t: name, x: $('#ndDesc').value.trim(),
                 d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name
             });
@@ -793,17 +813,25 @@ function initDeptPage() {
             '<form id="editDeptForm" class="pub-form" hidden><h2 class="form-sub">Редактирование кафедры</h2>' +
             '<div class="fld-row"><label class="fld"><span>Название *</span><input id="edName" required></label>' +
             '<label class="fld"><span>Направление</span><select class="select" id="edFac"></select></label></div>' +
-            '<div class="fld-row"><label class="fld"><span>Эмодзи</span><input id="edEmoji" maxlength="4"></label>' +
+            '<div class="fld-row"><label class="fld"><span>Иконка кафедры</span>' +
+            ((window.OU_icons && OU_icons.iconSelectHTML) ? OU_icons.iconSelectHTML('edIcon', d.ic || d.e || '') : '') +
+            '</label>' +
             '<label class="fld"><span>Описание</span><input id="edDesc"></label></div>' +
             '<div class="form-actions"><button class="file-btn" type="submit">Сохранить</button> ' +
             '<button class="edit-btn" id="edCancel" type="button">Отмена</button></div></form>');
         $('#edFac').innerHTML = FAC.map((f) => '<option' + (f === d.f ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
-        $('#edName').value = d.t; $('#edEmoji').value = d.e || ''; $('#edDesc').value = d.x || '';
+        $('#edName').value = d.t; $('#edDesc').value = d.x || '';
         $('#editDeptBtn').addEventListener('click', () => { $('#editDeptForm').hidden = !$('#editDeptForm').hidden; });
         $('#edCancel').addEventListener('click', () => { $('#editDeptForm').hidden = true; });
         $('#editDeptForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            LocalDepts.update(d.n, { t: $('#edName').value.trim() || d.t, f: $('#edFac').value, e: $('#edEmoji').value.trim() || '🎓', x: $('#edDesc').value.trim() });
+            const icEl = $('#edIcon');
+            const patch = { t: $('#edName').value.trim() || d.t, f: $('#edFac').value, x: $('#edDesc').value.trim() };
+            if (icEl) {
+                patch.ic = window.OU_icons ? OU_icons.normalizeDept({ ic: icEl.value, f: patch.f }).ic : icEl.value;
+                delete patch.e; /* эмодзи больше не используется */
+            }
+            LocalDepts.update(d.n, patch);
             location.reload();
         });
     }
@@ -866,14 +894,16 @@ function initPubs() {
     const me = effectiveUser();
     if (can(me, 'publish')) {
         const ph = $('.page-head');
+        const cbtn = '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>';
         if (ph) {
-            ph.insertAdjacentHTML('beforeend',
-                '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
+            /* вставляем сразу после заголовка — кнопка будет прижата к правому краю строки */
+            const h1 = ph.querySelector('.page-title');
+            if (h1) h1.insertAdjacentElement('afterend', document.createRange().createContextualFragment(cbtn).firstElementChild);
+            else ph.insertAdjacentHTML('beforeend', cbtn);
         } else {
             const countEl = $('#count');
             if (countEl) {
-                countEl.insertAdjacentHTML('beforebegin',
-                    '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
+                countEl.insertAdjacentHTML('beforebegin', cbtn);
             }
         }
     }
@@ -911,8 +941,11 @@ function initAllPubs() {
     if (can(effectiveUser(), 'publish')) {
         const cbtn = '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>';
         const ph = $('.page-head');
-        if (ph) ph.insertAdjacentHTML('beforeend', cbtn);
-        else $('#count').insertAdjacentHTML('beforebegin', cbtn);
+        if (ph) {
+            const h1 = ph.querySelector('.page-title');
+            if (h1) h1.insertAdjacentElement('afterend', document.createRange().createContextualFragment(cbtn).firstElementChild);
+            else ph.insertAdjacentHTML('beforeend', cbtn);
+        } else $('#count').insertAdjacentHTML('beforebegin', cbtn);
     }
     function render() {
         let list = sortPubs(Store.pubs);
@@ -962,6 +995,7 @@ function initPub() {
 <div class="dstat"><span>Год</span><i class="dots"></i><b>${esc(p.year)}</b></div>
 <div class="dstat"><span>Рецензий</span><i class="dots"></i><b>${allRevs}</b></div>
 <div class="dstat"><span>Издание</span><i class="dots"></i><b class="txt">${esc(p.venue)}</b></div>
+${p.license && CCL[p.license] ? '<div class="dstat"><span>Лицензия</span><i class="dots"></i><b class="txt"><span class="lic-badge">' + esc(p.license) + '</span> <small class="lic-hint">' + esc(CCL[p.license].hint) + '</small></b></div>' : ''}
 </div>
 ${fileButtonHTML(p, 'pub-' + p.id)}
 </article>`;
@@ -1167,6 +1201,14 @@ function initPubEdit() {
     $('#fAbstract').value = isEdit ? (existing.abstract || '') : '';
     $('#fYear').value = isEdit ? existing.year : new Date().getFullYear();
     $('#fVenue').value = isEdit ? existing.venue : '';
+    /* лицензия CC BY */
+    const licSel = $('#fLicense');
+    if (licSel) {
+        licSel.innerHTML = Object.entries(CCL).map(([k, v]) =>
+            '<option value="' + k + '"' + ((isEdit ? existing.license : 'CC BY') === k ? ' selected' : '') + '>' + esc(v.label) + '</option>').join('');
+        const updHint = () => { const h = $('#licHint'); if (h && CCL[licSel.value]) h.textContent = CCL[licSel.value].hint; };
+        licSel.addEventListener('change', updHint); updHint();
+    }
     if (isEdit && (existing.fileData || existing.file)) $('#fileHint').textContent = 'Сейчас: ' + (existing.fileName || existing.file);
 
     let pendingFile = null;
@@ -1189,6 +1231,7 @@ function initPubEdit() {
             authors: [me.short].concat(coSelected).join(', '),
             dept: me.dept, year: (+$('#fYear').value) || new Date().getFullYear(),
             venue: $('#fVenue').value.trim() || '—', supervisor: supSelected,
+            license: licSel ? licSel.value : 'CC BY',
             refs: refIds
         };
         if (pendingFile) { patch.fileData = pendingFile.fileData; patch.fileName = pendingFile.fileName; patch.hasFile = true; }
@@ -1440,7 +1483,7 @@ function initAdmin() {
     function renderUsers() {
         const list = LocalUsers.list();
         $('#tab-users').innerHTML = `<h2 class="sub-title">Пользователи · ${list.length}</h2>
-<table class="admin-table"><thead><tr><th>ID</th><th>ФИО</th><th>Email</th><th>Кафедра</th><th>Роли</th><th>Действия</th></tr></thead><tbody>
+<table class="admin-table"><colgroup><col style="width:7%"><col style="width:24%"><col style="width:22%"><col style="width:15%"><col style="width:16%"><col style="width:16%"></colgroup><thead><tr><th>ID</th><th>ФИО</th><th>Email</th><th>Кафедра</th><th>Роли</th><th>Действия</th></tr></thead><tbody>
 ${list.map((u) => `<tr data-uid="${u.id}"><td>${u.id}</td><td><a href="profile.html?id=${u.id}">${esc(u.name)}</a></td><td>${esc(u.email)}</td>
 <td>${u.dept != null && DEPT_BY_N[u.dept] ? esc(DEPT_BY_N[u.dept].t) : '—'}</td>
 <td>${Object.entries(ROLES).map(([k, r]) => {
@@ -1472,7 +1515,7 @@ ${list.map((u) => `<tr data-uid="${u.id}"><td>${u.id}</td><td><a href="profile.h
 <form class="pub-form new-dept-form" id="newDeptAdmin">
 <div class="fld-row"><label class="fld"><span>Название *</span><input id="ndaName" required></label>
 <label class="fld"><span>Направление *</span><select class="select" id="ndaFac">${FAC.map((f) => '<option>' + esc(f) + '</option>').join('')}</select></label></div>
-<div class="fld-row"><label class="fld"><span>Эмодзи</span><input id="ndaEmoji" maxlength="4"></label>
+<div class="fld-row"><label class="fld"><span>Иконка кафедры</span>${(window.OU_icons && OU_icons.iconSelectHTML) ? OU_icons.iconSelectHTML('ndaIcon', '') : '<select id="ndaIcon"></select>'}</label>
 <label class="fld"><span>Описание</span><input id="ndaDesc"></label></div>
 <div class="form-actions"><button class="file-btn" type="submit">Создать</button></div></form>
 <h2 class="sub-title">Кафедры · ${all.length}</h2>
@@ -1483,7 +1526,7 @@ ${all.map((d) => `<tr><td>${d.n}</td><td>${esc(d.t)}</td><td>${d.createdBy != nu
         $('#newDeptAdmin').addEventListener('submit', (e) => {
             e.preventDefault(); const name = $('#ndaName').value.trim(); if (!name) return;
             const n = LocalDepts.nextN(Math.max(...(Store.depts || []).map((d) => d.n)));
-            LocalDepts.add({ n: n, f: $('#ndaFac').value, e: $('#ndaEmoji').value.trim() || '🎓', t: name, x: $('#ndaDesc').value.trim(), d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name });
+            LocalDepts.add({ n: n, f: $('#ndaFac').value, ic: (window.OU_icons && $('#ndaIcon')) ? OU_icons.normalizeDept({ ic: $('#ndaIcon').value, f: $('#ndaFac').value }).ic : ($('#ndaIcon') ? $('#ndaIcon').value : 'cap'), t: name, x: $('#ndaDesc').value.trim(), d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name });
             renderDepts();
         });
         $('#tab-depts').querySelectorAll('button[data-del-d]').forEach((btn) => {
@@ -1493,7 +1536,7 @@ ${all.map((d) => `<tr><td>${d.n}</td><td>${esc(d.t)}</td><td>${d.createdBy != nu
     function renderPubs() {
         const list = (Store.pubs || []).slice().sort((a, b) => b.year - a.year || a.id - b.id);
         $('#tab-pubs').innerHTML = `<h2 class="sub-title">Публикации · ${list.length}</h2>
-<table class="admin-table"><thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Действия</th></tr></thead><tbody>
+<table class="admin-table"><colgroup><col style="width:8%"><col style="width:40%"><col style="width:22%"><col style="width:30%"></colgroup><thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Действия</th></tr></thead><tbody>
 ${list.map((p) => `<tr><td>${p.id}</td><td><a href="publication.html?id=${p.id}">${esc(p.title)}</a></td>
 <td><select data-stat="${p.id}">${Object.entries(STATUS).map(([k, s]) => '<option value="' + k + '"' + (p.status === k ? ' selected' : '') + '>' + esc(s.label) + '</option>').join('')}</select></td>
 <td class="admin-actions"><button data-save-stat="${p.id}">Сменить</button><button class="danger" data-del-p="${p.id}">Удалить</button></td></tr>`).join('')}
@@ -2049,13 +2092,50 @@ function initChats() {
         $('#chatName').textContent = p ? p.name : '';
         $('#chatThread').innerHTML = LocalMessages.between(USER.id, current).map((m) =>
             '<div class="msg' + (m.from === USER.id ? ' me' : '') + '"><small>' + esc(m.fromName) + ' · ' + new Date(m._ts).toLocaleDateString('ru-RU') + (m._edited ? ' · изменено' : '') + '</small>' +
-            esc(m.text) + (m.from === USER.id ? '<span class="msg-act"><button type="button" data-ed="' + m.id + '">✎</button><button type="button" data-del="' + m.id + '"></button></span>' : '') + '</div>'
+            '<span class="msg-text">' + esc(m.text) + '</span>' +
+            (m.from === USER.id ? '<button type="button" class="msg-edit-btn" data-ed="' + m.id + '" title="Редактировать" aria-label="Редактировать сообщение">' +
+                '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.2-4L16 5.2 18.8 8 8 18.8 4 20z"/><path d="m14 7 3 3"/></svg>' +
+                '</button>' : '') +
+            '</div>'
         ).join('') || '<div class="empty">Напишите первым.</div>';
     }
+    /* инлайн-редактирование: клик по карандашу на краю сообщения */
     $('#chatThread').addEventListener('click', (e) => {
-        const ed = e.target.closest('[data-ed]'); const del = e.target.closest('[data-del]');
-        if (ed) { const m = LocalMessages.list().find((x) => x.id === +ed.dataset.ed); if (!m) return; const t = prompt('Редактировать:', m.text); if (t !== null && t.trim()) { LocalMessages.update(m.id, { text: t.trim() }); renderThread(); renderList(); } }
-        if (del) { if (confirm('Удалить?')) { LocalMessages.remove(+del.dataset.del); renderThread(); renderList(); } }
+        const ed = e.target.closest('[data-ed]');
+        if (!ed) return;
+        const msgEl = ed.closest('.msg');
+        const textEl = msgEl && msgEl.querySelector('.msg-text');
+        const m = LocalMessages.list().find((x) => x.id === +ed.dataset.ed);
+        if (!m || !textEl || msgEl.querySelector('textarea')) return;
+        const ta = document.createElement('textarea');
+        ta.className = 'msg-edit-area';
+        ta.value = m.text;
+        ta.rows = Math.min(6, Math.max(2, m.text.split('\n').length));
+        const actions = document.createElement('div');
+        actions.className = 'msg-edit-actions';
+        actions.innerHTML = '<button type="button" class="msg-edit-save">Сохранить</button>' +
+            '<button type="button" class="msg-edit-cancel">Отмена</button>' +
+            '<span class="msg-edit-hint">Enter — сохранить · Esc — отмена</span>';
+        textEl.replaceWith(ta, actions);
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+        let done = false;
+        const finish = (save) => {
+            if (done) return; done = true;
+            const v = ta.value.trim();
+            if (save && v && v !== m.text) {
+                LocalMessages.update(m.id, { text: v, _edited: true });
+                renderThread(); renderList();
+            } else {
+                renderThread();
+            }
+        };
+        actions.querySelector('.msg-edit-save').addEventListener('click', () => finish(true));
+        actions.querySelector('.msg-edit-cancel').addEventListener('click', () => finish(false));
+        ta.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); finish(true); }
+            if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+        });
     });
     function openChat(pid) { current = pid; $('#noChat').hidden = true; $('#chatView').hidden = false; wrap.classList.add('chat-open'); renderList(); renderThread(); try { Notifications.markChatSeen(pid); } catch (e) {} if (window.OU_badges) window.OU_badges.refresh(); }
     bindAutocomplete($('#newChatInput'), $('#newChatDrop'), (Store.people || []).filter((x) => x.id !== USER.id), () => false,
@@ -2087,11 +2167,6 @@ function initKafedry() {
         'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
         'Психология': '#E76F51', 'Языки': '#264653'
     };
-    const icons = {
-        'Математика': '📐', 'Информатика': '💻', 'Физика': '',
-        'Химия': '', 'Гуманитарные науки': '📜', 'Экономика': '💼',
-        'Психология': '🧠', 'Языки': '🌍'
-    };
 
 function cardHTML(c) {
   const s = deptStats(c.n);
@@ -2099,7 +2174,7 @@ function cardHTML(c) {
   return `
   <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}" title="${esc(c.x || '')}">
     <div class="card-emoji" aria-hidden="true">
-      <span class="emoji-icon">${esc(c.e || '🎓')}</span>
+      ${(window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : ''}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
@@ -2143,6 +2218,8 @@ Store.loadAll()
         initSearch();
         INIT[page]();
         if (window.OU_theme) window.OU_theme.refresh();
+        /* централизованный пересчёт бейджей по РЕАЛЬНЫМ загруженным данным */
+        if (window.OU_badges) window.OU_badges.refresh();
     })
     .catch((err) => {
         console.error(err);
