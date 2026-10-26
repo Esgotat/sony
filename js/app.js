@@ -896,15 +896,17 @@ function initPubs() {
 // ============================================================
 function initAllPubs() {
     const pre = params.get('status');
+    const q = (params.get('q') || '').trim().toLowerCase();
     const state = { status: STATUS[pre] ? pre : 'Все' };
     if (can(effectiveUser(), 'publish'))
         $('#count').insertAdjacentHTML('beforebegin', '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
     function render() {
         let list = sortPubs(Store.pubs);
         if (state.status !== 'Все') list = list.filter((p) => p.status === state.status);
+        if (q) list = list.filter((p) => matches(q, p.title, p.authors, p.venue || '', p.abstract || ''));
         $('#cards').innerHTML = list.map(pubCard).join('');
         stagger($('#cards').querySelectorAll('.card'));
-        $('#count').textContent = list.length + ' ' + plural(list.length, ['публикация', 'публикации', 'публикаций']);
+        $('#count').textContent = list.length + ' ' + plural(list.length, ['публикация', 'публикации', 'публикаций']) + (q ? ' по запросу «' + q + '»' : '');
         $('#empty').hidden = list.length !== 0;
     }
     buildFilters(
@@ -1310,6 +1312,94 @@ function initAuth() {
 }
 
 // ============================================================
+// ЖАЛОБЫ: письмо администрации (доступно всем, включая гостей)
+// ============================================================
+const cmpTypeLabel = (k) => (COMPLAINT_TYPES[k] || { label: 'Без темы' }).label;
+const cmpStatusBadge = (c) => {
+    const s = COMPLAINT_STATUS[c.status] || COMPLAINT_STATUS.new;
+    return '<span class="status ' + s.cls + '">' + s.label + '</span>';
+};
+const cmpDate = (ts) => new Date(ts).toLocaleString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+function initComplaint() {
+    const form = $('#cmpForm'), okBox = $('#cmpSuccess');
+    if (!form) return;
+
+    // тема обращения — из словаря
+    $('#cmpType').innerHTML = Object.entries(COMPLAINT_TYPES)
+        .map(([k, t]) => '<option value="' + k + '">' + esc(t.label) + '</option>').join('');
+
+    // автозаполнение для авторизованных + скрытие полей имени/email
+    const authed = !USER.guest;
+    if (authed) {
+        $('#cmpName').value = USER.name || '';
+        $('#cmpEmail').value = USER.email || '';
+        form.querySelectorAll('.fld-row .fld').forEach((f) => f.style.display = 'none');
+    }
+
+    // счётчик символов
+    const ta = $('#cmpText'), counter = $('#cmpCounter');
+    ta.addEventListener('input', () => { counter.textContent = ta.value.length + ' / 2000'; });
+
+    // «Мои обращения» — только для авторизованных (по id или email гостя)
+    function myComplaints() {
+        const all = LocalComplaints.list();
+        return all.filter((c) => authed ? c.uid === USER.id : (c.email || '').toLowerCase() === (localStorage.getItem('ou_cmp_email') || '').toLowerCase());
+    }
+    function renderMine() {
+        const box = $('#cmpMine'), list = $('#cmpMineList');
+        const mine = myComplaints().sort((a, b) => (b._ts || 0) - (a._ts || 0));
+        if (!mine.length || (!authed && !localStorage.getItem('ou_cmp_email'))) { box.hidden = true; return; }
+        box.hidden = false;
+        list.innerHTML = mine.map((c) => `
+<div class="cmp-item${c.read ? '' : ' unread'}">
+<div class="cmp-item-head">
+<b>${esc(cmpTypeLabel(c.type))}</b>${cmpStatusBadge(c)}
+<span class="cmp-item-date">${cmpDate(c._ts)}</span>
+</div>
+<p class="cmp-item-text">${esc(c.text)}</p>
+${c.reply ? '<div class="cmp-reply"><small>Ответ администрации · ' + cmpDate(c.replyAt || c._ts) + '</small>' + esc(c.reply) + '</div>' : ''}
+</div>`).join('');
+    }
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = $('#cmpName').value.trim();
+        const email = $('#cmpEmail').value.trim();
+        const text = ta.value.trim();
+        if (name.length < 2) { alert('Укажите имя.'); $('#cmpName').focus(); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { alert('Укажите корректный email для ответа.'); $('#cmpEmail').focus(); return; }
+        if (text.length < 10) { alert('Опишите проблему подробнее (минимум 10 символов).'); ta.focus(); return; }
+
+        LocalComplaints.add({
+            id: Date.now(),
+            uid: authed ? USER.id : null,
+            fromName: authed ? USER.name : name,
+            fromShort: authed ? USER.short : name,
+            name: name, email: email,
+            type: $('#cmpType').value,
+            text: text,
+            page: location.origin + location.pathname,
+            status: 'new', read: false, reply: null, replyAt: null
+        });
+        localStorage.setItem('ou_cmp_email', email); // чтобы гость видел статус своего обращения
+
+        form.hidden = true;
+        okBox.hidden = false;
+        renderMine();
+        window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' });
+    });
+
+    $('#cmpAgain').addEventListener('click', () => {
+        okBox.hidden = true; form.hidden = false;
+        ta.value = ''; counter.textContent = '0 / 2000';
+        $('#cmpType').value = 'other';
+    });
+
+    renderMine();
+}
+
+// ============================================================
 // АДМИН-ПАНЕЛЬ
 // ============================================================
 function initAdmin() {
@@ -1320,7 +1410,7 @@ function initAdmin() {
         b.addEventListener('click', () => {
             document.querySelectorAll('#adminTabs .fbtn').forEach((x) => x.classList.remove('on'));
             b.classList.add('on');
-            ['users', 'depts', 'pubs', 'stats'].forEach((t) => { $('#tab-' + t).hidden = b.dataset.tab !== t; });
+            ['users', 'depts', 'pubs', 'complaints', 'stats'].forEach((t) => { $('#tab-' + t).hidden = b.dataset.tab !== t; });
             if (b.dataset.tab === 'stats' && !window._statsRendered) {
                 initAdminStats();
                 window._statsRendered = true;
@@ -1395,7 +1485,131 @@ ${list.map((p) => `<tr><td>${p.id}</td><td><a href="publication.html?id=${p.id}"
             btn.addEventListener('click', () => { if (confirm('Удалить?')) { LocalPubs.remove(+btn.dataset.delP); renderPubs(); } });
         });
     }
-    renderUsers(); renderDepts(); renderPubs();
+    // ---------- ЖАЛОБЫ (вкладка администрации) ----------
+    const cmpState = { filter: 'all', q: '' };
+    function updateCmpBadge() {
+        const badge = $('#cmpTabBadge');
+        if (!badge) return;
+        const n = LocalComplaints.list().filter((c) => !c.read && c.status !== 'closed').length;
+        badge.textContent = n || '';
+        badge.hidden = !n;
+    }
+    function renderComplaints() {
+        const all = LocalComplaints.list().slice().sort((a, b) => (b._ts || 0) - (a._ts || 0));
+        const counts = { all: all.length, new: 0, doing: 0, closed: 0 };
+        all.forEach((c) => { counts[c.status || 'new'] = (counts[c.status || 'new'] || 0) + 1; });
+        let list = all;
+        if (cmpState.filter !== 'all') list = list.filter((c) => (c.status || 'new') === cmpState.filter);
+        if (cmpState.q) {
+            const q = cmpState.q.toLowerCase();
+            list = list.filter((c) => [c.name, c.email, c.text, cmpTypeLabel(c.type)].join(' ').toLowerCase().includes(q));
+        }
+        $('#tab-complaints').innerHTML = `
+<h2 class="sub-title">Жалобы и обращения · ${all.length}</h2>
+<div class="cmp-admin-toolbar">
+${[['all', 'Все'], ['new', 'Новые'], ['doing', 'В работе'], ['closed', 'Закрытые']].map(([k, l]) =>
+    '<button class="fbtn' + (cmpState.filter === k ? ' on' : '') + '" data-cmpf="' + k + '">' + l + ' <small>' + (counts[k] || 0) + '</small></button>').join('')}
+<input id="cmpSearch" class="cmp-search" type="search" placeholder="поиск по жалобам…" value="${esc(cmpState.q)}">
+<button class="btn" id="cmpExport" type="button" title="Скачать CSV">CSV</button>
+</div>
+<div id="cmpAdminList">
+${list.length ? list.map((c) => `
+<article class="cmp-card${c.read ? '' : ' unread'}" data-cmp="${c.id}">
+<div class="cmp-card-head">
+<span class="status ${COMPLAINT_STATUS[c.status || 'new'].cls}">${COMPLAINT_STATUS[c.status || 'new'].label}</span>
+<b class="cmp-card-topic">${esc(cmpTypeLabel(c.type))}</b>
+<span class="cmp-card-date">${cmpDate(c._ts)}</span>
+${c.read ? '' : '<span class="cmp-new-tag">новая</span>'}
+</div>
+<div class="cmp-card-meta">
+от <b>${esc(c.fromName || c.name || '—')}</b>${c.uid ? ' (<a href="profile.html?id=' + c.uid + '">страница</a>)' : ''} ·
+<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.page ? ' · со страницы <code>' + esc(c.page.replace(/^https?:\/\//, '')) + '</code>' : ''}
+</div>
+<p class="cmp-card-text">${esc(c.text)}</p>
+${c.reply ? '<div class="cmp-reply"><small>Ответ администрации · ' + cmpDate(c.replyAt || c._ts) + '</small>' + esc(c.reply) + '</div>' : ''}
+<div class="cmp-card-actions">
+<select data-cmpstat="${c.id}">${Object.entries(COMPLAINT_STATUS).map(([k, s]) => '<option value="' + k + '"' + ((c.status || 'new') === k ? ' selected' : '') + '>' + s.label + '</option>').join('')}</select>
+<button type="button" data-cmpraw="${c.id}">↩ Ответить</button>
+<button type="button" class="danger" data-cmpdel="${c.id}">Удалить</button>
+</div>
+<div class="cmp-reply-box" data-cmpreply="${c.id}" hidden>
+<textarea rows="4" maxlength="2000" placeholder="Текст ответа пользователю…"></textarea>
+<div class="form-actions"><button class="file-btn" type="button" data-cmpsend="${c.id}">Отправить ответ</button></div>
+</div>
+</article>`).join('') : '<div class="empty">' + (all.length ? 'Ничего не найдено.' : 'Жалоб пока нет — письма с формы «Письмо администрации» появятся здесь.') + '</div>'}
+</div>`;
+
+        $('#tab-complaints').querySelectorAll('[data-cmpf]').forEach((b) => {
+            b.addEventListener('click', () => { cmpState.filter = b.dataset.cmpf; renderComplaints(); });
+        });
+        const search = $('#cmpSearch');
+        search.addEventListener('input', () => {
+            cmpState.q = search.value.trim();
+            clearTimeout(search._t);
+            search._t = setTimeout(renderComplaints, 250);
+            const pos = search.selectionStart; search.focus(); try { search.setSelectionRange(pos, pos); } catch (e) {}
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpstat]').forEach((sel) => {
+            sel.addEventListener('change', () => {
+                LocalComplaints.update(+sel.dataset.cmpstat, { status: sel.value, read: true });
+                updateCmpBadge(); renderComplaints();
+            });
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpraw]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const box = $('#tab-complaints').querySelector('[data-cmpreply="' + btn.dataset.cmpraw + '"]');
+                if (box) { box.hidden = !box.hidden; if (!box.hidden) box.querySelector('textarea').focus(); }
+            });
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpsend]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = +btn.dataset.cmpsend;
+                const box = $('#tab-complaints').querySelector('[data-cmpreply="' + id + '"]');
+                const text = box.querySelector('textarea').value.trim();
+                if (text.length < 3) { alert('Напишите текст ответа.'); return; }
+                LocalComplaints.update(id, { reply: text, replyAt: _ts(), read: true });
+                alert('Ответ сохранён. Пользователь увидит его в разделе «Мои обращения».');
+                updateCmpBadge(); renderComplaints();
+            });
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpdel]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (confirm('Удалить обращение безвозвратно?')) {
+                    LocalComplaints.remove(+btn.dataset.cmpdel);
+                    updateCmpBadge(); renderComplaints();
+                }
+            });
+        });
+        // открытие карточки = «прочитано»
+        $('#tab-complaints').querySelectorAll('.cmp-card.unread').forEach((card) => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, select, a, textarea')) return;
+                LocalComplaints.update(+card.dataset.cmp, { read: true });
+                card.classList.remove('unread');
+                const tag = card.querySelector('.cmp-new-tag'); if (tag) tag.remove();
+                updateCmpBadge();
+            });
+        });
+        $('#cmpExport').addEventListener('click', () => {
+            const rows = [['ID', 'Дата', 'Тема', 'Статус', 'Имя', 'Email', 'Текст', 'Ответ']];
+            all.forEach((c) => rows.push([
+                c.id, new Date(c._ts).toLocaleString('ru-RU'), cmpTypeLabel(c.type),
+                (COMPLAINT_STATUS[c.status || 'new'] || COMPLAINT_STATUS.new).label,
+                c.name || '', c.email || '', c.text || '', c.reply || ''
+            ]));
+            const csv = rows.map((r) => r.map((cell) => {
+                const s = String(cell == null ? '' : cell);
+                return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            }).join(';')).join('\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'complaints.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        });
+    }
+    renderUsers(); renderDepts(); renderPubs(); renderComplaints(); updateCmpBadge();
 }
 
 // ============================================================
@@ -1895,7 +2109,7 @@ const INIT = {
     home: initHome, people: initPeople, person: initProfile, me: initProfile,
     dept: initDept, deptpage: initDeptPage, pubs: initPubs, allpubs: initAllPubs,
     pub: initPub, pubnew: initPubEdit, requests: initRequests, newreq: initNewRequest,
-    auth: initAuth, admin: initAdmin, chats: initChats, kafedry: initKafedry
+    auth: initAuth, admin: initAdmin, chats: initChats, kafedry: initKafedry, complaint: initComplaint
 };
 const page = document.body.dataset.page || 'home';
 const loadBox = $('#cards') || $('#staff');

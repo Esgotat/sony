@@ -33,6 +33,18 @@ const REQ_TYPES = {
   trn: { label: "Перевод" }
 };
 const FAC = ["Математика", "Информатика", "Физика", "Химия", "Гуманитарные науки", "Экономика", "Психология", "Языки"];
+const COMPLAINT_TYPES = {
+  tech:   { label: "Техническая проблема" },
+  content:{ label: "Жалоба на контент" },
+  person: { label: "Поведение пользователя" },
+  idea:   { label: "Предложение" },
+  other:  { label: "Другое" }
+};
+const COMPLAINT_STATUS = {
+  new:    { label: "Новая", cls: "st-wait" },
+  doing:  { label: "В работе", cls: "st-fix" },
+  closed: { label: "Закрыта", cls: "st-ok" }
+};
 const LANGS = ["English", "Deutsch", "Français", "Español", "Italiano", "Português", "Polski", "Čeština", "Nederlands", "Türkçe", "Українська", "Беларуская", "Қазақша", "O‘zbekcha", "Тоҷикӣ", "Հայերեն", "ქართული", "Română", "Ελληνικά", "Latviešu", "Lietuvių", "Eesti", "Suomi", "Svenska", "Norsk", "Dansk", "Íslenska", "Gaeilge", "Cymraeg", "Brezhoneg", "Magyar", "Slovenčina", "Slovenščina", "Hrvatski", "Srpski", "Български", "Македонски", "Shqip", "Bosanski", "Crnogorski", "Русский", "Azerbaycan", "Türkmen", "Kyrgyz", "العربية", "עברית", "فارسی", "اردو", "हिन्दी", "বাংলা", "ਪੰਜਾਬੀ", "ગુજરાતી", "मराठी", "தமிழ்", "తెలుగు", "ಕನ್ನಡ", "മലയാളം", "සිංහල", "ไทย", "ລາວ", "ខ្មែរ", "မြန်မာ", "Việt", "Indonesian", "Malay", "Filipino", "Hawaiian", "Māori", "Samoan", "Tongan", "Fijian", "中文", "日本語", "한국어", "Монгол"];
 const can = (person, act) => {
   const r = person.roles || [];

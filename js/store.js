@@ -389,6 +389,22 @@ const LocalCheckReviews = {
   }
 };
 
+/* ---------- ЖАЛОБЫ (письма администрации) ---------- */
+const LocalComplaints = {
+  KEY: 'ou_complaints',
+  list() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch (e) { return []; } },
+  add(rec) { rec._ts = _ts(); const l = this.list(); l.push(rec); localStorage.setItem(this.KEY, JSON.stringify(l)); return rec; },
+  update(id, patch) {
+    patch._ts = _ts();
+    const l = this.list();
+    const i = l.findIndex((c) => c.id === id);
+    if (i > -1) { l[i] = Object.assign(l[i], patch); localStorage.setItem(this.KEY, JSON.stringify(l)); }
+  },
+  remove(id) {
+    localStorage.setItem(this.KEY, JSON.stringify(this.list().filter((c) => c.id !== id)));
+  }
+};
+
 /* ---------- ФАЙЛЫ В FIREBASE ---------- */
 const CloudFiles = {
   upload(key, data) {

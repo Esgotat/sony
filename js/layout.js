@@ -123,6 +123,13 @@ links.push({ href: 'index.html', label: 'Главная', id: 'home' });
 links.push({ href: 'znakomye.html', label: 'Знакомые', id: 'people' });
 links.push({ href: 'moya-kafedra.html', label: 'Моя кафедра', id: 'dept' });
 const cabinetOn = ['pubs', 'req', 'chats'].includes(active);
+const unreadComplaints = (() => {
+  if (!isAdmin(USER)) return 0;
+  try {
+    return (JSON.parse(localStorage.getItem('ou_complaints')) || [])
+      .filter((c) => !c.read && c.status !== 'closed').length;
+  } catch (e) { return 0; }
+})();
 
 document.getElementById('hd').innerHTML = `
 <a class="brand" href="index.html"><span class="brand-line1">Open</span><span class="brand-line2">University</span></a>
@@ -133,14 +140,15 @@ ${links.map((n) => {
 }).join('')}
 ${!USER.guest ? `
 <div class="hd-dd">
-<a class="hd-dd-btn${cabinetOn ? ' on' : ''}" href="moi-publikacii.html">Кабинет <span class="caret">▾</span></a>
+<button class="hd-dd-btn${cabinetOn ? ' on' : ''}" type="button" aria-haspopup="true" aria-expanded="false">Кабинет <span class="caret">▾</span></button>
 <ul class="hd-dd-menu">
 <li><a href="moi-publikacii.html">Мои публикации</a></li>
 <li><a href="new-request.html">Мои запросы</a></li>
 <li><a href="chats.html">Мои чаты</a></li>
+<li><a href="complaint.html">Написать администрации</a></li>
 </ul>
 </div>` : ''}
-${isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель</a>` : ''}
+${isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель${unreadComplaints ? ' <span class="hd-badge">' + unreadComplaints + '</span>' : ''}</a>` : ''}
 ${USER.guest
     ? '<a href="login.html" class="me-link">Войти</a>'
     : '<a href="#" class="me-link" id="logoutBtn">Выйти</a>'}
@@ -183,9 +191,73 @@ const pubItems = Object.entries(STATUS).map(([key, s]) => `<li><a href="publicat
 const roleItems = Object.entries(ROLES).map(([key, r]) => `<li><a href="znakomye.html?role=${key}">${r.label}</a></li>`).join('');
 const reqItems = Object.entries(REQ_TYPES).map(([key, t]) => `<li><a href="requests.html?type=${key}">${t.label}</a></li>`).join('');
 document.getElementById('subnav').innerHTML = `
-<div class="dd"><a class="dd-btn" href="kafedry.html">Кафедры <span class="caret">▾</span></a><ul class="dd-menu">${facItems}</ul></div>
-<div class="dd"><a class="dd-btn" href="publications.html">Публикации <span class="caret">▾</span></a><ul class="dd-menu">${pubItems}</ul></div>
-<div class="dd"><a class="dd-btn" href="znakomye.html">Коллеги <span class="caret">▾</span></a><ul class="dd-menu">${roleItems}</ul></div>
-<div class="dd"><a class="dd-btn" href="requests.html">Запросы <span class="caret">▾</span></a><ul class="dd-menu">${reqItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Кафедры <span class="caret">▾</span></button><ul class="dd-menu">${facItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Публикации <span class="caret">▾</span></button><ul class="dd-menu">${pubItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Коллеги <span class="caret">▾</span></button><ul class="dd-menu">${roleItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Запросы <span class="caret">▾</span></button><ul class="dd-menu">${reqItems}</ul></div>
 `;
+
+
+/* ---------- ТАЧ-АККОРДЕОНЫ (шапка + подменю) ----------
+   На десктопе меню раскрываются по наведению (CSS), на телефоне — только тапом:
+   класс .open вешает/снимает этот код. Повторный тап по кнопке ведёт на раздел. */
+const TOUCH = matchMedia('(hover: none)').matches || innerWidth <= 640;
+function initDropdown(rootSel, wrapCls, btnCls) {
+    const wraps = Array.prototype.slice.call(document.querySelectorAll(rootSel + ' .' + wrapCls));
+    function closeAll(except) {
+        wraps.forEach((w) => {
+            if (w === except) return;
+            w.classList.remove('open');
+            const b = w.querySelector('.' + btnCls);
+            if (b) b.setAttribute('aria-expanded', 'false');
+        });
+    }
+    wraps.forEach((wrap) => {
+        const btn = wrap.querySelector('.' + btnCls);
+        if (!btn) return;
+        btn.addEventListener('click', (e) => {
+            e.preventDefault();
+            const wasOpen = wrap.classList.contains('open');
+            closeAll(wrap);
+            if (!wasOpen) {
+                wrap.classList.add('open');
+                btn.setAttribute('aria-expanded', 'true');
+            } else if (TOUCH && btn.dataset.href) {
+                location.href = btn.dataset.href; // второй тап — перейти в раздел
+            } else {
+                wrap.classList.remove('open');
+                btn.setAttribute('aria-expanded', 'false');
+            }
+        });
+    });
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.' + wrapCls)) closeAll(null);
+    });
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        closeAll(null);
+        wraps.forEach((w) => {
+            const b = w.querySelector('.' + btnCls);
+            if (b) b.blur();
+        });
+    });
+}
+initDropdown('#subnav', 'dd', 'dd-btn');
+initDropdown('.hd-nav', 'hd-dd', 'hd-dd-btn');
+/* повторный тап по кнопке раздела ведёт на страницу раздела */
+const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html', 'requests.html'];
+document.querySelectorAll('#subnav .dd .dd-btn').forEach((b, idx) => { b.dataset.href = DD_HREFS[idx] || ''; });
+const cabBtn = document.querySelector('.hd-dd-btn');
+if (cabBtn) cabBtn.dataset.href = 'moi-publikacii.html';
+
+/* ---------- ПОИСК: Enter ведёт на страницу результатов ---------- */
+const searchInput = document.getElementById('siteSearch');
+if (searchInput) {
+    searchInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && searchInput.value.trim()) {
+            location.href = 'publications.html?q=' + encodeURIComponent(searchInput.value.trim());
+        }
+    });
+}
+
 })();
