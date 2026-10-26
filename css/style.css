@@ -143,9 +143,6 @@ gap: 28px;
 padding: 12px 28px;
 border-bottom: 1px solid var(--line);
 background: var(--bg);
-position: sticky;
-top: 57px;
-z-index: 90;
 }
 .dd { position: relative; }
 .dd-btn {

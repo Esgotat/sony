@@ -122,11 +122,11 @@ if (!USER.guest) links.push({ href: 'profile.html?id=' + USER.id, label: 'Моя
 links.push({ href: 'index.html', label: 'Главная', id: 'home' });
 links.push({ href: 'znakomye.html', label: 'Знакомые', id: 'people' });
 links.push({ href: 'moya-kafedra.html', label: 'Моя кафедра', id: 'dept' });
-const cabinetOn = ['pubs', 'req', 'chats'].includes(active);
+const cabinetOn = ['pubs', 'req', 'chats', 'complaint'].includes(active);
 const unreadComplaints = (() => {
   if (!isAdmin(USER)) return 0;
   try {
-    return (JSON.parse(localStorage.getItem('ou_complaints')) || [])
+    return LocalComplaints.list()
       .filter((c) => !c.read && c.status !== 'closed').length;
   } catch (e) { return 0; }
 })();
