@@ -432,6 +432,26 @@ const Notifications = {
     this._set(k, o);
     if (window.OU_badges) window.OU_badges.refresh();
   },
+  /* --- жалобы: непрочитанные ответы администрации на мои обращения --- */
+  unreadComplaints() {
+    if (typeof USER === 'undefined' || USER.guest) return 0;
+    const seen = this._get('ou_seen_cmp_' + USER.id);
+    return LocalComplaints.list().filter((c) => {
+      if (c.by !== USER.id && c.uid !== USER.id) return false;
+      if (!c.reply) return false;
+      return (c.replyAt || 0) > (seen[c.id] || 0);
+    }).length;
+  },
+  markComplaintsSeen() {
+    if (typeof USER === 'undefined' || USER.guest) return;
+    const k = 'ou_seen_cmp_' + USER.id;
+    const o = this._get(k);
+    LocalComplaints.list().forEach((c) => {
+      if ((c.by === USER.id || c.uid === USER.id) && c.reply) o[c.id] = c.replyAt || Date.now();
+    });
+    this._set(k, o);
+    if (window.OU_badges) window.OU_badges.refresh();
+  },
   /* --- запросы: r.seenBy = список id просмотревших --- */
   unreadRequests() {
     if (typeof USER === 'undefined' || USER.guest) return 0;

@@ -206,9 +206,12 @@ function deptDetailHTML(d) {
 
 function profileHTML(person, extraRight) {
 const r0 = (person.roles && person.roles[0]) || 'res';
+const av = (window.OU_icons && OU_icons.avatarSVG)
+    ? '<div class="avatar avatar-big svg">' + OU_icons.avatarSVG(person.name, r0, 80) + '</div>'
+    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>';
 return `
 <div class="profile-left">
-<div class="avatar avatar-big av-${r0}">${esc(initialsOf(person.name))}</div>
+${av}
 <div>
 <h2 class="profile-name">${esc(person.name)}</h2>
 <p class="person-note">${esc(person.note || '')}</p>

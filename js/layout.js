@@ -142,10 +142,10 @@ ${!USER.guest ? `
 <div class="hd-dd">
 <button class="hd-dd-btn${cabinetOn ? ' on' : ''}" type="button" aria-haspopup="true" aria-expanded="false" id="cabBtn">Кабинет <span class="caret">▾</span><span class="hd-badge" id="cabBadge" hidden></span></button>
 <ul class="hd-dd-menu">
-<li><a href="moi-publikacii.html">Мои публикации<span class="dd-badge" data-bd="pubs" hidden></span></a></li>
-<li><a href="new-request.html">Мои запросы<span class="dd-badge" data-bd="reqs" hidden></span></a></li>
-<li><a href="chats.html">Мои чаты<span class="dd-badge" data-bd="chats" hidden></span></a></li>
-<li><a href="complaint.html">Написать администрации${unreadComplaints ? '<span class="dd-badge vis">' + unreadComplaints + '</span>' : ''}</a></li>
+<li><a href="moi-publikacii.html"><span class="dd-label">Мои публикации</span><span class="dd-badge" data-bd="pubs" hidden></span></a></li>
+<li><a href="new-request.html"><span class="dd-label">Мои запросы</span><span class="dd-badge" data-bd="reqs" hidden></span></a></li>
+<li><a href="chats.html"><span class="dd-label">Мои чаты</span><span class="dd-badge" data-bd="chats" hidden></span></a></li>
+<li><a href="complaint.html"><span class="dd-label">Написать администрации</span><span class="dd-badge" data-bd="cmp" hidden></span></a></li>
 </ul>
 </div>` : ''}
 ${isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель${unreadComplaints ? ' <span class="hd-badge">' + unreadComplaints + '</span>' : ''}</a>` : ''}
@@ -215,6 +215,10 @@ function initDropdown(rootSel, wrapCls, btnCls) {
     wraps.forEach((wrap) => {
         const btn = wrap.querySelector('.' + btnCls);
         if (!btn) return;
+        /* на десктопе меню раскрывается по наведению (CSS), клик ведёт на раздел */
+        if (!TOUCH) return;
+        /* мобильные: первый тап — раскрыть/свернуть список,
+           повторный тап по раскрытой кнопке — перейти на страницу раздела */
         btn.addEventListener('click', (e) => {
             e.preventDefault();
             const wasOpen = wrap.classList.contains('open');
@@ -222,7 +226,7 @@ function initDropdown(rootSel, wrapCls, btnCls) {
             if (!wasOpen) {
                 wrap.classList.add('open');
                 btn.setAttribute('aria-expanded', 'true');
-            } else if (TOUCH && btn.dataset.href) {
+            } else if (btn.dataset.href) {
                 location.href = btn.dataset.href; // второй тап — перейти в раздел
             } else {
                 wrap.classList.remove('open');
@@ -250,13 +254,12 @@ const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html', 'request
 document.querySelectorAll('#subnav .dd .dd-btn').forEach((b, idx) => { b.dataset.href = DD_HREFS[idx] || ''; });
 const cabBtn = document.querySelector('.hd-dd-btn');
 if (cabBtn) cabBtn.dataset.href = 'moi-publikacii.html';
-if (!TOUCH) {
-    /* десктоп: клик по самой кнопке раздела ведёт на страницу раздела
-       (меню при этом остаётся доступным по наведению мыши) */
-    document.querySelectorAll('#subnav .dd .dd-btn').forEach((b) => {
-        if (b.dataset.href) b.addEventListener('click', () => { location.href = b.dataset.href; });
-    });
-}
+/* клик по кнопке раздела («Кафедры», «Публикации», «Коллеги», «Запросы») всегда
+   ведёт на соответствующую страницу; меню открывается по наведению (десктоп)
+   или удержанием/вторым тапом (мобильные — класс .open в initDropdown) */
+document.querySelectorAll('#subnav .dd .dd-btn').forEach((b) => {
+    if (b.dataset.href) b.addEventListener('click', () => { location.href = b.dataset.href; });
+});
 
 /* ---------- БЕЙДЖИ УВЕДОМЛЕНИЙ (чаты / запросы / публикации) ---------- */
 window.OU_badges = (function () {
@@ -266,29 +269,48 @@ window.OU_badges = (function () {
         el.hidden = !(n > 0);
         el.classList.toggle('vis', n > 0);
     }
+    function unreadComplaintsForUser() {
+        /* реальные данные: ответы админа на мои жалобы + мои жалобы без ответа */
+        if (typeof USER === 'undefined' || USER.guest) return 0;
+        let n = 0;
+        try { n += Notifications.unreadComplaints(); } catch (e) {}
+        try {
+            if (typeof LocalComplaints !== 'undefined') {
+                n += LocalComplaints.list().filter((c) => (c.by === USER.id || c.uid === USER.id) && !c.reply).length;
+            }
+        } catch (e) {}
+        return n;
+    }
     function refresh() {
         if (typeof USER === 'undefined' || USER.guest || typeof Notifications === 'undefined') return;
         let c = 0, r = 0, p = 0;
         try { c = Notifications.unreadChats(); } catch (e) {}
         try { r = Notifications.unreadRequests(); } catch (e) {}
         try { p = Notifications.unreadPubs(); } catch (e) {}
+        const cm = unreadComplaintsForUser();
         set(document.querySelector('[data-bd="chats"]'), c);
         set(document.querySelector('[data-bd="reqs"]'), r);
         set(document.querySelector('[data-bd="pubs"]'), p);
-        const total = c + r + p;
+        set(document.querySelector('[data-bd="cmp"]'), cm);
+        const total = c + r + p + cm;
         const cab = document.getElementById('cabBadge');
         if (cab) { cab.textContent = total > 99 ? '99+' : total; cab.hidden = total === 0; }
-        const admbadge = document.querySelector('.hd-nav a[href="admin.html"] .hd-badge:not(#cabBadge)');
-        if (admbadge && typeof Store !== 'undefined' && Store.complaints) {
-            const uc = Store.complaints.filter((x) => !x.read && x.status !== 'closed').length;
-            admbadge.textContent = uc; admbadge.hidden = !uc;
+        const admlink = document.querySelector('.hd-nav a[href="admin.html"]');
+        if (admlink && typeof LocalComplaints !== 'undefined') {
+            let uc = 0;
+            try { uc = LocalComplaints.list().filter((x) => !x.read && x.status !== 'closed').length; } catch (e) {}
+            let b = admlink.querySelector('.hd-badge');
+            if (!b) { b = document.createElement('span'); b.className = 'hd-badge'; admlink.appendChild(b); }
+            b.textContent = uc > 99 ? '99+' : uc; b.hidden = !uc;
         }
     }
     document.addEventListener('click', (e) => {
         const btn = e.target.closest('#cabBtn');
         if (btn) setTimeout(refresh, 50);
     }, true);
+    window.addEventListener('ou:data', refresh);   // пересчёт после загрузки/синхронизации данных
     refresh();
+    setInterval(refresh, 60000);                   // периодическая сверка с реальными данными
     return { refresh };
 })();
 
