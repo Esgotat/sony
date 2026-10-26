@@ -42,10 +42,10 @@ font: 800 13px/1 var(--font-m);
 flex: none;
 background: transparent;
 }
-.b-d  { color: #2D6A4F; }
-.b-k  { color: #B8860B; }
-.b-a  { color: #457B9D; }
-.b-ch { color: #C41E3A; }
+.b-d  { background: rgba(45,106,79,.14); color: #2D6A4F; }
+.b-k  { background: rgba(184,134,11,.16); color: #B8860B; }
+.b-a  { background: rgba(69,123,157,.16); color: #457B9D; }
+.b-ch { background: rgba(196,30,58,.14); color: #C41E3A; }
 .b-res { background: var(--bk); color: #FFF; }
 .b-rev { background: var(--bd); color: #FFF; }
 .b-sup { background: var(--ba); color: #FFF; }
@@ -57,7 +57,11 @@ background: transparent;
 display: flex;
 align-items: center;
 gap: 20px;
-padding: 18px 28px 14px;
+position: sticky;
+top: 0;
+z-index: 100;
+isolation: isolate;
+padding: max(10px, env(safe-area-inset-top)) 28px 8px;
 border-bottom: 1px solid var(--line);
 flex-wrap: wrap;
 position: relative;
@@ -90,8 +94,20 @@ padding: 10px 16px;
 border-bottom: 2px solid transparent;
 transition: all 0.2s ease;
 }
-.hd-nav a:hover { border-bottom-color: var(--ink); color: var(--accent); }
-.hd-nav a.on { border-bottom: 2px solid var(--accent); font-weight: 700; }
+/* underline: тонкая линия через ::after — не меняет высоту кнопки
+   и не пересекается с соседними строками при переносе навигации */
+.hd-nav a, .hd-dd-btn { position: relative; }
+.hd-nav a:hover { color: var(--accent); }
+.hd-nav a.on { font-weight: 700; color: var(--accent); }
+.hd-nav a:hover::after, .hd-nav a.on::after,
+.hd-dd-btn:hover::after, .hd-dd-btn.on::after {
+content: "";
+position: absolute;
+left: 12px; right: 12px; bottom: 3px;
+height: 2px;
+background: currentColor;
+border-radius: 2px;
+}
 .hd-nav a.me-page {
 background: var(--dark);
 color: var(--paper);
@@ -130,6 +146,7 @@ background: var(--bg);
 }
 
 /* ---------- ПОДМЕНЮ ---------- */
+html { scroll-padding-top: 140px; }
 .subnav {
 display: flex;
 gap: 28px;
@@ -142,6 +159,7 @@ background: var(--bg);
 background: none;
 border: none;
 cursor: pointer;
+user-select: none;
 font: 600 11px/1 var(--font-b);
 letter-spacing: 0.08em;
 text-transform: uppercase;
@@ -151,6 +169,15 @@ color: var(--ink);
 transition: color 0.2s ease;
 }
 .dd-btn:hover { color: var(--accent); }
+
+/* На устройствах без hover (телефоны/планшеты) выпадашки по наведению
+   отключены — меню открывается только тапом (класс .open вешает layout.js) */
+@media (hover: none) {
+.dd:hover > .dd-menu, .dd:focus-within > .dd-menu { display: none; }
+.dd.open:hover > .dd-menu { display: block; }
+.hd-dd:hover > .hd-dd-menu, .hd-dd:focus-within > .hd-dd-menu { display: none; }
+.hd-dd.open:hover > .hd-dd-menu { display: block; }
+}
 .caret { font-size: 9px; color: var(--muted); margin-left: 3px; }
 .dd-menu {
 position: absolute;
@@ -167,8 +194,13 @@ border-radius: 4px;
 overflow: hidden;
 }
 .dd:hover .dd-menu, .dd:focus-within .dd-menu { display: block; }
+/* тап-режим (мобильные): класс .open ставит layout.js */
+.dd.open > .dd-menu { display: block !important; }
 .dd-menu a {
-display: block;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 10px;
 padding: 10px 16px;
 font: 500 11px/1.2 var(--font-b);
 letter-spacing: 0.06em;
@@ -177,8 +209,35 @@ text-decoration: none;
 border-bottom: 1px solid var(--line);
 transition: all 0.15s ease;
 }
+.dd-menu a .dd-label { flex: 1 1 auto; min-width: 0; }
 .dd-menu a:last-child { border-bottom: none; }
 .dd-menu a:hover { background: var(--bg-2); color: var(--accent); }
+
+/* ---------- БЕЙДЖИ УВЕДОМЛЕНИЙ (красный квадратик у правого края строки) ---------- */
+.dd-badge, .hd-badge {
+flex: none;
+margin-left: auto;
+min-width: 20px;
+height: 20px;
+padding: 0 5px;
+box-sizing: border-box;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+background: #D64545;
+color: #FFF;
+font: 800 11px/1 var(--font-m);
+border-radius: 4px;
+}
+/* в выпадашках («Кабинет», подменю) — вплотную к правому краю секции */
+.dd-menu a, .hd-dd-menu a { padding-right: 12px; }
+.dd-menu a .dd-badge, .hd-dd-menu a .dd-badge { margin-left: auto; }
+.dd-badge[hidden], .hd-badge[hidden] { display: none !important; }
+/* в кнопках шапки/подменю бейдж прижат к правому краю самой кнопки */
+.hd-nav > a, .hd-dd-btn, .dd-btn { display: inline-flex; align-items: center; gap: 7px; }
+.hd-nav > a .hd-badge, .hd-dd-btn .hd-badge, .dd-btn .dd-badge { margin-left: auto; }
+/* у пунктов subnav («Кафедры» и т.п.) бейдж — справа от текста с небольшим зазором */
+.subnav .dd-btn .dd-badge, .subnav .hd-badge { margin-left: 8px; }
 
 /* ---------- КОНТЕНТ ---------- */
 .content { padding: 32px 28px 48px; }
@@ -222,6 +281,11 @@ height: 28px;
 font-size: 14px;
 font-weight: 800;
 }
+/* в легенде квадратики всегда с цветом (перебивают transparent-фолбэк) */
+.legend .b.b-d  { background: rgba(45,106,79,.14); color: #2D6A4F; }
+.legend .b.b-k  { background: rgba(184,134,11,.16); color: #B8860B; }
+.legend .b.b-a  { background: rgba(69,123,157,.16); color: #457B9D; }
+.legend .b.b-ch { background: rgba(196,30,58,.14); color: #C41E3A; }
 
 /* ---------- ФИЛЬТРЫ ---------- */
 .filters-row {
@@ -348,14 +412,19 @@ font-size: 16px;
 border: none;
 border-radius: 4px;
 font-weight: 800;
-background: transparent;
 display: inline-grid;
 place-items: center;
 }
-.stat .b-d  { color: #2D6A4F; }
-.stat .b-k  { color: #B8860B; }
-.stat .b-a  { color: #457B9D; }
-.stat .b-ch { color: #C41E3A; }
+/* цветные квадратики статусов НЕ перекрываются прозрачным фоном */
+.stat .b.b-d  { background: rgba(45,106,79,.14); color: #2D6A4F; }
+.stat .b.b-k  { background: rgba(184,134,11,.16); color: #B8860B; }
+.stat .b.b-a  { background: rgba(69,123,157,.16); color: #457B9D; }
+.stat .b.b-ch { background: rgba(196,30,58,.14); color: #C41E3A; }
+.stat .b.b-res { background: var(--bk); color: #FFF; }
+.stat .b.b-rev { background: var(--bd); color: #FFF; }
+.stat .b.b-sup { background: var(--ba); color: #FFF; }
+.stat .b.b-trn { background: #3E6C8E; color: #FFF; }
+.stat .b.b-adm { background: var(--adm, #6B2D5C); color: #FFF; }
 .card-title { font: 600 13px/1.35 var(--font-h); }
 .card-title a { text-decoration: none; color: inherit; transition: color 0.15s ease; }
 .card-title a:hover { color: var(--accent); }
@@ -588,7 +657,7 @@ place-items: center;
 
 /* ---------- АДАПТИВ ---------- */
 @media (max-width: 900px) {
-.hd { padding: 14px 18px 10px; gap: 10px; }
+.hd { padding: max(10px, env(safe-area-inset-top)) 18px 8px; gap: 10px; }
 .brand-line1, .brand-line2 { font-size: 18px; }
 .hd-nav { margin-left: 0; width: 100%; order: 3; gap: 0; flex-wrap: wrap; }
 .hd-nav a { padding: 8px 10px; font-size: 10px; }
@@ -601,22 +670,94 @@ place-items: center;
 }
 @media (max-width: 640px) {
 .content { padding: 20px 16px 32px; }
-.subnav { padding: 10px 16px; gap: 16px; }
-  .dd { position: static; }
-  .dd-menu { 
-    position: static; 
-    left: auto; 
-    right: auto; 
-    box-shadow: none; 
-    border: none; 
-    border-left: 2px solid var(--accent); 
-    margin: 4px 0 4px 8px; 
-    padding: 4px 0; 
-  }
-  .dd-menu a { 
-    padding: 8px 12px; 
-    font-size: 12px; 
-  }
+/* --- Подменю: аккордеон вместо hover-выпадашек.
+   На тач-экранах hover не работает, а статичное раскрытое меню
+   «уносило» соседние кнопки за экран --- */
+.subnav {
+display: grid;
+grid-template-columns: 1fr;
+gap: 0;
+padding: 6px 12px 10px;
+position: static;
+}
+.dd { position: relative; display: block; width: 100%; }
+.dd-btn {
+display: flex;
+align-items: center;
+justify-content: space-between;
+width: 100%;
+min-height: 44px;
+padding: 10px 6px;
+border-bottom: 1px solid var(--line);
+font-size: 12px;
+}
+.dd .caret { transition: transform 0.2s ease; margin-left: 8px; }
+.dd.open > .dd-btn .caret { transform: rotate(180deg); }
+.dd-menu {
+position: static;
+display: none;
+left: auto;
+right: auto;
+min-width: 0;
+box-shadow: none;
+border: none;
+border-radius: 0;
+overflow: visible;
+border-left: 2px solid var(--accent);
+background: var(--bg-2);
+margin: 4px 0 8px 8px;
+padding: 2px 0;
+}
+
+/* переопределяем desktop-правила (.dd:hover / :focus-within) —
+   на телефоне меню открывается ТОЛЬКО тапом */
+.dd:hover > .dd-menu, .dd:focus-within > .dd-menu { display: none !important; }
+.dd.open > .dd-menu { display: block !important; }
+.dd-menu a {
+display: flex;
+align-items: center;
+padding: 10px 12px;
+min-height: 40px;
+font-size: 11px;
+border-bottom: 1px dashed var(--line);
+}
+.dd-menu a:last-child { border-bottom: none; }
+/* --- «Кабинет» в шапке: тоже аккордеон --- */
+.hd-nav { gap: 0; }
+.hd-nav > a { min-height: 40px; width: 100%; border-bottom: 1px solid var(--line); padding: 10px 6px; font-size: 12px; }
+.hd-nav > a.me-page, .hd-nav > a.me-link { justify-content: space-between; }
+.hd-nav > a:last-of-type { border-bottom: none; }
+/* на телефоне линия-подчёркивание не нужна — есть разделители строк */
+.hd-nav a:hover::after, .hd-nav a.on::after,
+.hd-dd-btn:hover::after, .hd-dd-btn.on::after { content: none; }
+.hd-nav a.on { color: var(--accent); }
+.hd-dd { width: 100%; order: 5; border-top: 1px solid var(--line); }
+.hd-dd-btn {
+display: flex;
+align-items: center;
+justify-content: space-between;
+width: 100%;
+min-height: 44px;
+padding: 10px 6px;
+border-bottom: none;
+font-size: 12px;
+}
+.hd-dd.open > .hd-dd-btn .caret { transform: rotate(180deg); }
+.hd-dd-menu {
+position: static;
+display: none;
+min-width: 0;
+border: none;
+border-radius: 0;
+box-shadow: none;
+border-left: 2px solid var(--accent);
+background: var(--bg-2);
+margin: 2px 0 8px 8px;
+}
+
+.hd-dd:hover > .hd-dd-menu, .hd-dd:focus-within > .hd-dd-menu { display: none !important; }
+.hd-dd.open > .hd-dd-menu { display: block !important; }
+.hd-dd-menu a { display: flex; align-items: center; padding: 10px 12px; min-height: 40px; }
 .page-title { font-size: 22px; }
 .legend { gap: 10px; padding: 8px 12px; }
 .lg { font-size: 10px; gap: 6px; }

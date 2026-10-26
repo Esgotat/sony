@@ -1,0 +1,17 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="UTF-8">
+<link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/pages.css"></head>
+<body data-page="complaint">
+<header class="hd" id="hd"></header>
+<div class="frame"><nav class="subnav" id="subnav"></nav>
+<main class="content"><div class="page-head"><h1 class="page-title">Тест</h1></div>
+<form id="cmpForm" class="pub-form cmp-form" novalidate>
+<div class="fld-row"><label class="fld"><span>Имя</span><input id="cmpName"></label><label class="fld"><span>Email</span><input id="cmpEmail"></label></div>
+<div class="fld"><span>Тема</span><select class="select" id="cmpType"></select></div>
+<div class="fld"><span>Сообщение <small id="cmpCounter">0 / 2000</small></span><textarea id="cmpText" rows="7"></textarea></div>
+<div class="form-actions"><button class="file-btn" type="submit">Отправить</button></div></form>
+<div class="cmp-success" id="cmpSuccess" hidden><button id="cmpAgain">Ещё</button></div>
+<section class="cmp-mine" id="cmpMine" hidden><div id="cmpMineList"></div></section>
+</main></div>
+<script src="js/data.js"></script><script src="js/store.js"></script>
+<script src="js/icons.js"></script><script src="js/layout.js"></script><script src="js/app.js"></script>
+</body></html>

@@ -389,6 +389,137 @@ const LocalCheckReviews = {
   }
 };
 
+/* ---------- ЖАЛОБЫ (письма администрации) ---------- */
+const LocalComplaints = {
+  KEY: 'ou_complaints',
+  list() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch (e) { return []; } },
+  add(rec) { rec._ts = _ts(); const l = this.list(); l.push(rec); localStorage.setItem(this.KEY, JSON.stringify(l)); return rec; },
+  update(id, patch) {
+    patch._ts = _ts();
+    const l = this.list();
+    const i = l.findIndex((c) => c.id === id);
+    if (i > -1) { l[i] = Object.assign(l[i], patch); localStorage.setItem(this.KEY, JSON.stringify(l)); }
+  },
+  remove(id) {
+    localStorage.setItem(this.KEY, JSON.stringify(this.list().filter((c) => c.id !== id)));
+  }
+};
+
+/* ---------- УВЕДОМЛЕНИЯ (непрочитанные: чаты, запросы, публикации) ---------- */
+const Notifications = {
+  _get(k) { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { return {}; } },
+  _set(k, o) { localStorage.setItem(k, JSON.stringify(o)); },
+  /* --- чаты: m.seen = отметка времени последнего просмотра диалога --- */
+  unreadChats() {
+    if (typeof USER === 'undefined' || USER.guest) return 0;
+    const seen = this._get('ou_seen_chats_' + USER.id);
+    let n = 0;
+    LocalMessages.list().forEach((m) => {
+      if (m.to === USER.id && (m._ts || 0) > (seen[m.from] || 0)) n++;
+    });
+    return n;
+  },
+  chatUnreadFrom(pid) {
+    if (typeof USER === 'undefined' || USER.guest) return 0;
+    const seen = this._get('ou_seen_chats_' + USER.id)[pid] || 0;
+    return LocalMessages.list().filter((m) => m.to === USER.id && m.from === pid && (m._ts || 0) > seen).length;
+  },
+  markChatSeen(pid) {
+    if (typeof USER === 'undefined' || USER.guest) return;
+    const k = 'ou_seen_chats_' + USER.id;
+    const o = this._get(k);
+    o[pid] = Date.now();
+    this._set(k, o);
+    if (window.OU_badges) window.OU_badges.refresh();
+  },
+  /* --- жалобы: непрочитанные ответы администрации на мои обращения --- */
+  unreadComplaints() {
+    if (typeof USER === 'undefined' || USER.guest) return 0;
+    const seen = this._get('ou_seen_cmp_' + USER.id);
+    return LocalComplaints.list().filter((c) => {
+      if (c.by !== USER.id && c.uid !== USER.id) return false;
+      if (!c.reply) return false;
+      return (c.replyAt || 0) > (seen[c.id] || 0);
+    }).length;
+  },
+  markComplaintsSeen() {
+    if (typeof USER === 'undefined' || USER.guest) return;
+    const k = 'ou_seen_cmp_' + USER.id;
+    const o = this._get(k);
+    LocalComplaints.list().forEach((c) => {
+      if ((c.by === USER.id || c.uid === USER.id) && c.reply) o[c.id] = c.replyAt || Date.now();
+    });
+    this._set(k, o);
+    if (window.OU_badges) window.OU_badges.refresh();
+  },
+  /* --- запросы: r.seenBy = список id просмотревших --- */
+  unreadRequests() {
+    if (typeof USER === 'undefined' || USER.guest) return 0;
+    let n = 0;
+    (Store.requests || []).forEach((r) => {
+      if (r.by !== USER.id && !(r.seenBy || []).includes(USER.id)) n++;
+    });
+    return n;
+  },
+  markRequestsSeen() {
+    if (typeof USER === 'undefined' || USER.guest || !Store.requests) return;
+    let ch = false;
+    Store.requests.forEach((r) => {
+      if (r.by === USER.id) return;
+      if (!(r.seenBy || []).includes(USER.id)) {
+        r.seenBy = (r.seenBy || []).concat([USER.id]);
+        LocalRequestPatch.update(r.id, { seenBy: r.seenBy });
+        ch = true;
+      }
+    });
+    if (window.OU_badges) window.OU_badges.refresh();
+  },
+  /* --- публикации: p.seenBy (для соавторов, не автора) --- */
+  unreadPubs() {
+    if (typeof USER === 'undefined' || USER.guest) return 0;
+    let n = 0;
+    (Store.pubs || []).forEach((p) => {
+      if (!p.authors || !p.authors.includes(USER.short)) return;
+      if (p.by === USER.id) return;
+      if (!(p.seenBy || []).includes(USER.id)) n++;
+    });
+    return n;
+  },
+  markPubSeen(id) {
+    if (typeof USER === 'undefined' || USER.guest) return;
+    const p = (Store.pubs || []).find((x) => x.id === id);
+    if (!p || p.by === USER.id || (p.seenBy || []).includes(USER.id)) return;
+    p.seenBy = (p.seenBy || []).concat([USER.id]);
+    LocalPubs.update(id, { seenBy: p.seenBy });
+    if (window.OU_badges) window.OU_badges.refresh();
+  }
+};
+
+/* ---------- ЭКСПОРТ В WINDOW (доступно из layout.js / app.js) ---------- */
+window.Notifications = Notifications;
+window.LocalMessages = LocalMessages;
+window.LocalFriends = LocalFriends;
+window.LocalComplaints = LocalComplaints;
+window.LocalProfile = LocalProfile;
+window.LocalPubs = LocalPubs;
+window.LocalDepts = LocalDepts;
+window.LocalUsers = LocalUsers;
+window.LocalRequests = LocalRequests;
+window.CloudSync = CloudSync;
+
+/* патч-хранилище для полей чужих запросов (seenBy) */
+const LocalRequestPatch = {
+  KEY: 'ou_requests_overrides',
+  _get() { try { return JSON.parse(localStorage.getItem(this.KEY)) || {}; } catch (e) { return {}; } },
+  update(id, patch) {
+    patch._ts = _ts();
+    const o = this._get();
+    o[id] = Object.assign(o[id] || {}, patch);
+    localStorage.setItem(this.KEY, JSON.stringify(o));
+  }
+};
+window.LocalRequestPatch = LocalRequestPatch;
+
 /* ---------- ФАЙЛЫ В FIREBASE ---------- */
 const CloudFiles = {
   upload(key, data) {
@@ -431,7 +562,9 @@ const Store = {
       this.depts = depts
         .filter((d) => !d.tpl && !delD.includes(d.n))
         .concat(LocalDepts.list().filter((d) => !delD.includes(d.n)))
-        .map((d) => (ovrD[d.n] ? Object.assign({}, d, ovrD[d.n]) : d));
+        .map((d) => (ovrD[d.n] ? Object.assign({}, d, ovrD[d.n]) : d))
+        /* эмодзи больше не поддерживается: приводим к SVG-иконке */
+        .map((d) => (window.OU_icons && OU_icons.normalizeDept) ? OU_icons.normalizeDept(d) : d);
 
       this.people = people.concat(LocalUsers.list().map((u) => {
         const c = Object.assign({}, u);
@@ -447,7 +580,10 @@ const Store = {
 
       this.reviews = reviews;
       this.translations = translations.concat(LocalTranslations.list());
-      this.requests = requests.concat(LocalRequests.list());
+      /* патчи seenBy (уведомления) для запросов из base-файла */
+      const ovrReq = LocalRequestPatch._get();
+      this.requests = requests.concat(LocalRequests.list())
+        .map((r) => (ovrReq[r.id] ? Object.assign({}, r, { seenBy: ovrReq[r.id].seenBy }) : r));
 
       this.requests.filter((r) => r.type === 'check').forEach((r) => {
         const all = (r.reviews || []).concat(LocalCheckReviews.list(r.id));
@@ -469,6 +605,10 @@ const Store = {
       });
 
       return this;
+    }).then((res) => {
+      /* событие для пересчёта бейджей уведомлений по РЕАЛЬНЫМ загруженным данным */
+      try { window.dispatchEvent(new Event('ou:data')); } catch (e) {}
+      return res;
     }));
   }
 };

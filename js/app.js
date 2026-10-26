@@ -148,10 +148,15 @@ function personCard(p) {
   const roles = (p.roles || []).map((r) => ROLES[r]
     ? `<span class="stat"><span class="b b-${r}" style="background:${ROLE_BG[r] || '#2D6A4F'}">${ROLES[r].letter}</span></span>`
     : '').join('');
+  const avIcon = p.photo
+    ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
+    : ((window.OU_icons && OU_icons.avatarSVG)
+        ? OU_icons.avatarSVG(p.name, r0, 96)
+        : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`);
   return `
   <a class="card card-link person-card" href="profile.html?id=${p.id}">
     <div class="card-emoji" aria-hidden="true">
-      <span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>
+      ${avIcon}
     </div>
     <div class="card-bottom">
       <div class="card-stats">${roles}</div>
@@ -163,6 +168,20 @@ function personCard(p) {
   </a>`;
 }
 
+/* ---------- CC-ЛИЦЕНЗИИ (по принципу Creative Commons) ---------- */
+const CCL = {
+  'CC BY':        { label: 'CC BY — с указанием автора',                hint: 'Можно свободно копировать, распространять и адаптировать, даже в коммерческих целях, при указании авторства.' },
+  'CC BY-SA':     { label: 'CC BY-SA — с указанием автора, на тех же условиях', hint: 'Как CC BY, но производные работы обязаны распространяться под той же лицензией.' },
+  'CC BY-NC':     { label: 'CC BY-NC — с указанием автора, некоммерчески', hint: 'Свободное использование только для некоммерческих целей, с указанием авторства.' },
+  'CC BY-NC-SA':  { label: 'CC BY-NC-SA — некоммерчески, на тех же условиях', hint: 'Некоммерческое распространение и адаптация с указанием авторства и сохранением лицензии.' },
+  'CC BY-ND':     { label: 'CC BY-ND — с указанием автора, без производных', hint: 'Можно копировать и распространять только полный текст, без изменений, с указанием авторства.' },
+  'CC0':          { label: 'CC0 — общественное достояние',              hint: 'Полный отказ от авторских прав: любое использование без ограничений.' }
+};
+function licBadgeHTML(p) {
+    if (!p || !p.license || !CCL[p.license]) return '';
+    return '<span class="lic-badge" title="' + esc(CCL[p.license].hint) + '">' + esc(p.license) + '</span>';
+}
+
 function pubCard(p) {
     const st = STATUS[p.status] || STATUS.wait;
     const d = DEPT_BY_N[p.dept];
@@ -170,6 +189,7 @@ function pubCard(p) {
 <a class="card card-link pub-card" style="--stripe:${d ? FAC_COLOR[d.f] || 'var(--ink)' : 'var(--ink)'}" href="publication.html?id=${p.id}">
 <div class="card-top">
 <span class="num">${esc(p.year)}</span>
+${licBadgeHTML(p)}
 <span class="status ${st.cls}">${esc(st.short)}</span>
 </div>
 <h3 class="card-title">${esc(p.title)}</h3>
@@ -183,7 +203,7 @@ function deptDetailHTML(d) {
     const creator = d.createdBy != null ? esc(d.creatorName || ('пользователь №' + d.createdBy)) : 'база университета';
     return `
 <div>
-<div class="dept-emoji" aria-hidden="true">${esc(d.e || '🎓')}</div>
+<div class="dept-emoji">${d.photo ? '<img class="dept-photo" src="' + esc(d.photo) + '" alt="Фото кафедры">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(d) : '')}</div>
 <span class="fac">${esc(d.f)}</span>
 <h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
 <p class="dept-desc">${esc(d.x || '')}</p>
@@ -206,14 +226,19 @@ function deptDetailHTML(d) {
 
 function profileHTML(person, extraRight) {
 const r0 = (person.roles && person.roles[0]) || 'res';
+const av = person.photo
+    ? '<img class="avatar avatar-big avatar-photo" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">'
+    : ((window.OU_icons && OU_icons.avatarSVG)
+    ? '<div class="avatar avatar-big svg">' + OU_icons.avatarSVG(person.name, r0, 80) + '</div>'
+    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>');
 return `
 <div class="profile-left">
-<div class="avatar avatar-big av-${r0}">${esc(initialsOf(person.name))}</div>
+${av}
 <div>
 <h2 class="profile-name">${esc(person.name)}</h2>
 <p class="person-note">${esc(person.note || '')}</p>
 <div class="card-stats">
-${(person.roles || []).map((r) => ROLES[r] ? `<span class="stat"><span class="b b-${r}">${ROLES[r].letter}</span>${esc(ROLES[r].label)}</span>` : '').join('')}
+${(person.roles || []).map((r) => ROLES[r] ? `<span class="stat"><span class="b b-${r}" style="background:${ROLES[r].color};color:#FFF">${ROLES[r].letter}</span>${esc(ROLES[r].label)}</span>` : '').join('')}
 </div>
 </div>
 </div>
@@ -468,19 +493,13 @@ function initHome() {
         'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
         'Психология': '#E76F51', 'Языки': '#264653'
     };
-    const icons = {
-        'Математика': '', 'Информатика': '💻', 'Физика': '⚛',
-        'Химия': '⚗', 'Гуманитарные науки': '📜', 'Экономика': '💼',
-        'Психология': '🧠', 'Языки': '🌍'
-    };
-
 function deptCardHTML(c) {
   const s = deptStats(c.n);
   const val = (v) => (v == null ? '—' : v);
   return `
   <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
     <div class="card-emoji" aria-hidden="true">
-      <span class="emoji-icon">${esc(c.e || icons[c.f] || '🎓')}</span>
+      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
@@ -510,24 +529,23 @@ function deptCardHTML(c) {
 // ============================================================
 function initPeople() {
     const pre = params.get('role');
-    const isFriendsMode = params.get('mode') === 'friends';
+    /* страница «Знакомые» всегда показывает только список знакомых; галочки переключения нет.
+       Коллег по роли можно посмотреть со ссылками вида znakomye.html?role=res */
+    const isFriendsMode = location.pathname.indexOf('znakomye') !== -1 &&
+        (params.get('mode') === 'friends' || !params.get('role'));
     const state = {
         role: ['rev', 'res', 'sup', 'trn', 'adm'].includes(pre) ? pre : 'Все',
-        friendsOnly: isFriendsMode
+        friendsOnly: isFriendsMode && !USER.guest
     };
 
     if (!USER.guest && !$('#addFriendBar')) {
         $('.filters-row').insertAdjacentHTML('afterend',
             '<div class="member-bar add-friend-bar" id="addFriendBar">' +
-            '<label class="switch"><input type="checkbox" id="friendsToggle"' + (isFriendsMode ? ' checked' : '') + '> Только знакомые</label>' +
+            '<span class="member-note">Добавить в знакомые:</span>' +
             '<div class="ac-wrap add-friend-wrap">' +
             '<input type="text" id="addFriendInput" class="ac-input" placeholder="Найти коллегу по ФИО…" autocomplete="off">' +
             '<div class="ac-drop" id="addFriendDrop" hidden></div>' +
             '</div></div>');
-        $('#friendsToggle').addEventListener('change', function () {
-            state.friendsOnly = this.checked;
-            render();
-        });
         bindAutocomplete(
             $('#addFriendInput'), $('#addFriendDrop'),
             (Store.people || []).filter((x) => x.id !== USER.id),
@@ -538,7 +556,7 @@ function initPeople() {
 
     function render() {
         let list;
-        if (state.friendsOnly && !USER.guest) {
+        if (state.friendsOnly) {
             list = LocalFriends.list()
                 .map((id) => (Store.people || []).find((p) => p.id === id))
                 .filter(Boolean);
@@ -578,7 +596,12 @@ function initPeople() {
 // ============================================================
 function initProfile() {
     const id = +params.get('id');
-    const person = id === USER.id ? effectiveUser() : (Store.people || []).find((x) => x.id === id);
+    let person = id === USER.id ? effectiveUser() : (Store.people || []).find((x) => x.id === id);
+    /* фото профиля хранится в LocalProfile/LocalUsers — подтягиваем его и для «базовых» людей */
+    if (person && id === USER.id && !person.photo) {
+        const lu = LocalUsers.byId(person.id);
+        if (lu && lu.photo) person.photo = lu.photo;
+    }
     if (!person) { $('#profile').innerHTML = '<div class="empty">Страница не найдена.</div>'; return; }
     const isOwner = person.id === USER.id;
     if (isOwner && USER.guest) { location.href = 'login.html'; return; }
@@ -592,7 +615,39 @@ function initProfile() {
 
     if (isOwner && !$('#resetBtn')) {
         $('#ownerBar').insertAdjacentHTML('beforeend',
+            ' <button class="edit-btn" id="photoBtn" type="button">Фото профиля</button>' +
+            ' <input type="file" id="photoInput" accept="image/*" hidden>' +
             ' <button class="edit-btn" id="resetBtn" type="button">Сбросить правки</button>');
+        /* загрузка фото профиля: сжимается до 256px и хранится как dataURL */
+        $('#photoBtn').addEventListener('click', () => $('#photoInput').click());
+        $('#photoInput').addEventListener('change', (e) => {
+            const f = e.target.files[0];
+            e.target.value = '';
+            if (!f) return;
+            if (!/^image\//.test(f.type)) { alert('Нужен файл изображения (JPG/PNG).'); return; }
+            if (f.size > 8 * 1024 * 1024) { alert('Файл больше 8 МБ.'); return; }
+            const btn = $('#photoBtn');
+            btn.disabled = true; btn.textContent = 'Обработка…';
+            const done = (dataUrl) => {
+                LocalProfile.save({ photo: dataUrl });
+                person.photo = dataUrl;
+                if (LocalUsers.byId(person.id)) LocalUsers.update(person.id, { photo: dataUrl });
+                try { window.dispatchEvent(new Event('ou:data')); } catch (err) {}
+                render();
+            };
+            if (window.OU_icons && OU_icons.readImage) {
+                OU_icons.readImage(f, 256, (err, dataUrl) => {
+                    if (err) { alert('Не удалось прочитать изображение.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
+                    try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
+                    catch (err2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
+                    done(dataUrl);
+                });
+            } else {
+                const rd = new FileReader();
+                rd.onload = () => done(rd.result);
+                rd.readAsDataURL(f);
+            }
+        });
         $('#resetBtn').addEventListener('click', () => {
             if (confirm('Сбросить все правки вашего профиля?')) { LocalProfile.reset(); location.reload(); }
         });
@@ -736,14 +791,22 @@ function initProfile() {
             render();
         });
         $('#createDeptBtn').addEventListener('click', () => { $('#newDeptForm').hidden = !$('#newDeptForm').hidden; });
+        if (window.OU_icons && OU_icons.iconSelectHTML) {
+            const icSel = $('#ndIcon');
+            if (icSel) icSel.outerHTML = OU_icons.iconSelectHTML('ndIcon', 'cap');
+        }
         $('#newDeptForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const name = $('#ndName').value.trim();
             if (!name || !can(USER, 'admin')) { alert('Создавать кафедры может только администратор.'); return; }
             const baseMax = Math.max(...(Store.depts || []).map((d) => d.n));
             const n = LocalDepts.nextN(baseMax);
+            const facVal = $('#ndFac').value;
+            const icEl = $('#ndIcon');
+            const icVal = (icEl && window.OU_icons) ? OU_icons.normalizeDept({ ic: icEl.value }).ic
+                : (icEl ? icEl.value : 'cap');
             LocalDepts.add({
-                n: n, f: $('#ndFac').value, e: $('#ndEmoji').value.trim() || '🎓',
+                n: n, f: facVal, ic: icVal,
                 t: name, x: $('#ndDesc').value.trim(),
                 d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name
             });
@@ -789,18 +852,42 @@ function initDeptPage() {
             '<form id="editDeptForm" class="pub-form" hidden><h2 class="form-sub">Редактирование кафедры</h2>' +
             '<div class="fld-row"><label class="fld"><span>Название *</span><input id="edName" required></label>' +
             '<label class="fld"><span>Направление</span><select class="select" id="edFac"></select></label></div>' +
-            '<div class="fld-row"><label class="fld"><span>Эмодзи</span><input id="edEmoji" maxlength="4"></label>' +
+            '<div class="fld-row"><label class="fld"><span>Иконка кафедры</span>' +
+            ((window.OU_icons && OU_icons.iconSelectHTML) ? OU_icons.iconSelectHTML('edIcon', d.ic || d.e || '') : '') +
+            '</label>' +
             '<label class="fld"><span>Описание</span><input id="edDesc"></label></div>' +
+            '<div class="fld-row"><label class="fld"><span>Фото кафедры (необязательно)</span>' +
+            '<input type="file" id="edPhoto" accept="image/*"></label>' +
+            '<label class="fld chk-fld"><span>&nbsp;</span><label class="switch"><input type="checkbox" id="edPhotoClear"> Удалить фото</label></label></div>' +
             '<div class="form-actions"><button class="file-btn" type="submit">Сохранить</button> ' +
             '<button class="edit-btn" id="edCancel" type="button">Отмена</button></div></form>');
         $('#edFac').innerHTML = FAC.map((f) => '<option' + (f === d.f ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
-        $('#edName').value = d.t; $('#edEmoji').value = d.e || ''; $('#edDesc').value = d.x || '';
+        $('#edName').value = d.t; $('#edDesc').value = d.x || '';
         $('#editDeptBtn').addEventListener('click', () => { $('#editDeptForm').hidden = !$('#editDeptForm').hidden; });
         $('#edCancel').addEventListener('click', () => { $('#editDeptForm').hidden = true; });
         $('#editDeptForm').addEventListener('submit', (e) => {
             e.preventDefault();
-            LocalDepts.update(d.n, { t: $('#edName').value.trim() || d.t, f: $('#edFac').value, e: $('#edEmoji').value.trim() || '🎓', x: $('#edDesc').value.trim() });
-            location.reload();
+            const icEl = $('#edIcon');
+            const patch = { t: $('#edName').value.trim() || d.t, f: $('#edFac').value, x: $('#edDesc').value.trim() };
+            if (icEl) {
+                patch.ic = window.OU_icons ? OU_icons.normalizeDept({ ic: icEl.value, f: patch.f }).ic : icEl.value;
+                delete patch.e; /* эмодзи больше не используется */
+            }
+            const savePatch = () => { LocalDepts.update(d.n, patch); location.reload(); };
+            const clearChk = $('#edPhotoClear');
+            if (clearChk && clearChk.checked) { patch.photo = null; savePatch(); return; }
+            const phEl = $('#edPhoto');
+            const pf = phEl && phEl.files[0];
+            if (pf) {
+                if (!/^image\//.test(pf.type)) { alert('Нужен файл изображения.'); return; }
+                OU_icons.readImage(pf, 320, (err, dataUrl) => {
+                    if (err) { alert('Не удалось прочитать изображение.'); return; }
+                    try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
+                    catch (e2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); return; }
+                    patch.photo = dataUrl;
+                    savePatch();
+                });
+            } else savePatch();
         });
     }
     const ppl = Store.people.filter((p) => p.dept === d.n);
@@ -861,10 +948,18 @@ function initPubs() {
     
     const me = effectiveUser();
     if (can(me, 'publish')) {
-        const countEl = $('#count');
-        if (countEl) {
-            countEl.insertAdjacentHTML('beforebegin',
-                '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
+        const ph = $('.page-head');
+        const cbtn = '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>';
+        if (ph) {
+            /* вставляем сразу после заголовка — кнопка будет прижата к правому краю строки */
+            const h1 = ph.querySelector('.page-title');
+            if (h1) h1.insertAdjacentElement('afterend', document.createRange().createContextualFragment(cbtn).firstElementChild);
+            else ph.insertAdjacentHTML('beforeend', cbtn);
+        } else {
+            const countEl = $('#count');
+            if (countEl) {
+                countEl.insertAdjacentHTML('beforebegin', cbtn);
+            }
         }
     }
     
@@ -896,15 +991,24 @@ function initPubs() {
 // ============================================================
 function initAllPubs() {
     const pre = params.get('status');
+    const q = (params.get('q') || '').trim().toLowerCase();
     const state = { status: STATUS[pre] ? pre : 'Все' };
-    if (can(effectiveUser(), 'publish'))
-        $('#count').insertAdjacentHTML('beforebegin', '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
+    if (can(effectiveUser(), 'publish')) {
+        const cbtn = '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>';
+        const ph = $('.page-head');
+        if (ph) {
+            const h1 = ph.querySelector('.page-title');
+            if (h1) h1.insertAdjacentElement('afterend', document.createRange().createContextualFragment(cbtn).firstElementChild);
+            else ph.insertAdjacentHTML('beforeend', cbtn);
+        } else $('#count').insertAdjacentHTML('beforebegin', cbtn);
+    }
     function render() {
         let list = sortPubs(Store.pubs);
         if (state.status !== 'Все') list = list.filter((p) => p.status === state.status);
+        if (q) list = list.filter((p) => matches(q, p.title, p.authors, p.venue || '', p.abstract || ''));
         $('#cards').innerHTML = list.map(pubCard).join('');
         stagger($('#cards').querySelectorAll('.card'));
-        $('#count').textContent = list.length + ' ' + plural(list.length, ['публикация', 'публикации', 'публикаций']);
+        $('#count').textContent = list.length + ' ' + plural(list.length, ['публикация', 'публикации', 'публикаций']) + (q ? ' по запросу «' + q + '»' : '');
         $('#empty').hidden = list.length !== 0;
     }
     buildFilters(
@@ -922,6 +1026,8 @@ function initPub() {
     const p = (Store.pubs || []).find((x) => x.id === id);
     const box = $('#pubDetail');
     if (!p) { box.innerHTML = '<div class="empty">Публикация не найдена.</div>'; return; }
+    try { Notifications.markPubSeen(p.id); } catch (e) {}
+    if (window.OU_badges) window.OU_badges.refresh();
     const me = effectiveUser();
     const st = STATUS[p.status] || STATUS.wait;
     const dept = DEPT_BY_N[p.dept];
@@ -944,6 +1050,7 @@ function initPub() {
 <div class="dstat"><span>Год</span><i class="dots"></i><b>${esc(p.year)}</b></div>
 <div class="dstat"><span>Рецензий</span><i class="dots"></i><b>${allRevs}</b></div>
 <div class="dstat"><span>Издание</span><i class="dots"></i><b class="txt">${esc(p.venue)}</b></div>
+${p.license && CCL[p.license] ? '<div class="dstat"><span>Лицензия</span><i class="dots"></i><b class="txt"><span class="lic-badge">' + esc(p.license) + '</span> <small class="lic-hint">' + esc(CCL[p.license].hint) + '</small></b></div>' : ''}
 </div>
 ${fileButtonHTML(p, 'pub-' + p.id)}
 </article>`;
@@ -1149,6 +1256,14 @@ function initPubEdit() {
     $('#fAbstract').value = isEdit ? (existing.abstract || '') : '';
     $('#fYear').value = isEdit ? existing.year : new Date().getFullYear();
     $('#fVenue').value = isEdit ? existing.venue : '';
+    /* лицензия CC BY */
+    const licSel = $('#fLicense');
+    if (licSel) {
+        licSel.innerHTML = Object.entries(CCL).map(([k, v]) =>
+            '<option value="' + k + '"' + ((isEdit ? existing.license : 'CC BY') === k ? ' selected' : '') + '>' + esc(v.label) + '</option>').join('');
+        const updHint = () => { const h = $('#licHint'); if (h && CCL[licSel.value]) h.textContent = CCL[licSel.value].hint; };
+        licSel.addEventListener('change', updHint); updHint();
+    }
     if (isEdit && (existing.fileData || existing.file)) $('#fileHint').textContent = 'Сейчас: ' + (existing.fileName || existing.file);
 
     let pendingFile = null;
@@ -1171,6 +1286,7 @@ function initPubEdit() {
             authors: [me.short].concat(coSelected).join(', '),
             dept: me.dept, year: (+$('#fYear').value) || new Date().getFullYear(),
             venue: $('#fVenue').value.trim() || '—', supervisor: supSelected,
+            license: licSel ? licSel.value : 'CC BY',
             refs: refIds
         };
         if (pendingFile) { patch.fileData = pendingFile.fileData; patch.fileName = pendingFile.fileName; patch.hasFile = true; }
@@ -1206,6 +1322,8 @@ function initRequests() {
         state.type, (k) => { state.type = k; render(); }
     );
     render();
+    try { Notifications.markRequestsSeen(); } catch (e) {}
+    if (window.OU_badges) window.OU_badges.refresh();
 }
 
 function initNewRequest() {
@@ -1310,6 +1428,96 @@ function initAuth() {
 }
 
 // ============================================================
+// ЖАЛОБЫ: письмо администрации (доступно всем, включая гостей)
+// ============================================================
+const cmpTypeLabel = (k) => (COMPLAINT_TYPES[k] || { label: 'Без темы' }).label;
+const cmpStatusBadge = (c) => {
+    const s = COMPLAINT_STATUS[c.status] || COMPLAINT_STATUS.new;
+    return '<span class="status ' + s.cls + '">' + s.label + '</span>';
+};
+const cmpDate = (ts) => new Date(ts).toLocaleString('ru-RU', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+function initComplaint() {
+    const form = $('#cmpForm'), okBox = $('#cmpSuccess');
+    if (!form) return;
+
+    // тема обращения — из словаря
+    $('#cmpType').innerHTML = Object.entries(COMPLAINT_TYPES)
+        .map(([k, t]) => '<option value="' + k + '">' + esc(t.label) + '</option>').join('');
+
+    // автозаполнение для авторизованных + скрытие полей имени/email
+    const authed = !USER.guest;
+    if (authed) {
+        $('#cmpName').value = USER.name || '';
+        $('#cmpEmail').value = USER.email || '';
+        form.querySelectorAll('.fld-row .fld').forEach((f) => f.style.display = 'none');
+    }
+
+    // счётчик символов
+    const ta = $('#cmpText'), counter = $('#cmpCounter');
+    ta.addEventListener('input', () => { counter.textContent = ta.value.length + ' / 2000'; });
+
+    // «Мои обращения» — только для авторизованных (по id или email гостя)
+    function myComplaints() {
+        const all = LocalComplaints.list();
+        return all.filter((c) => authed ? c.uid === USER.id : (c.email || '').toLowerCase() === (localStorage.getItem('ou_cmp_email') || '').toLowerCase());
+    }
+    function renderMine() {
+        const box = $('#cmpMine'), list = $('#cmpMineList');
+        const mine = myComplaints().sort((a, b) => (b._ts || 0) - (a._ts || 0));
+        if (!mine.length || (!authed && !localStorage.getItem('ou_cmp_email'))) { box.hidden = true; return; }
+        box.hidden = false;
+        list.innerHTML = mine.map((c) => `
+<div class="cmp-item${c.read ? '' : ' unread'}">
+<div class="cmp-item-head">
+<b>${esc(cmpTypeLabel(c.type))}</b>${cmpStatusBadge(c)}
+<span class="cmp-item-date">${cmpDate(c._ts)}</span>
+</div>
+<p class="cmp-item-text">${esc(c.text)}</p>
+${c.reply ? '<div class="cmp-reply"><small>Ответ администрации · ' + cmpDate(c.replyAt || c._ts) + '</small>' + esc(c.reply) + '</div>' : ''}
+</div>`).join('');
+    }
+
+    form.addEventListener('submit', (e) => {
+        e.preventDefault();
+        const name = $('#cmpName').value.trim();
+        const email = $('#cmpEmail').value.trim();
+        const text = ta.value.trim();
+        if (name.length < 2) { alert('Укажите имя.'); $('#cmpName').focus(); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email)) { alert('Укажите корректный email для ответа.'); $('#cmpEmail').focus(); return; }
+        if (text.length < 10) { alert('Опишите проблему подробнее (минимум 10 символов).'); ta.focus(); return; }
+
+        LocalComplaints.add({
+            id: Date.now(),
+            uid: authed ? USER.id : null,
+            fromName: authed ? USER.name : name,
+            fromShort: authed ? USER.short : name,
+            name: name, email: email,
+            type: $('#cmpType').value,
+            text: text,
+            page: location.origin + location.pathname,
+            status: 'new', read: false, reply: null, replyAt: null
+        });
+        localStorage.setItem('ou_cmp_email', email); // чтобы гость видел статус своего обращения
+
+        form.hidden = true;
+        okBox.hidden = false;
+        renderMine();
+        window.scrollTo({ top: 0, behavior: REDUCED ? 'auto' : 'smooth' });
+    });
+
+    $('#cmpAgain').addEventListener('click', () => {
+        okBox.hidden = true; form.hidden = false;
+        ta.value = ''; counter.textContent = '0 / 2000';
+        $('#cmpType').value = 'other';
+    });
+
+    renderMine();
+    try { Notifications.markComplaintsSeen(); } catch (e) {}
+    if (window.OU_badges) window.OU_badges.refresh();
+}
+
+// ============================================================
 // АДМИН-ПАНЕЛЬ
 // ============================================================
 function initAdmin() {
@@ -1320,7 +1528,7 @@ function initAdmin() {
         b.addEventListener('click', () => {
             document.querySelectorAll('#adminTabs .fbtn').forEach((x) => x.classList.remove('on'));
             b.classList.add('on');
-            ['users', 'depts', 'pubs', 'stats'].forEach((t) => { $('#tab-' + t).hidden = b.dataset.tab !== t; });
+            ['users', 'depts', 'pubs', 'complaints', 'stats'].forEach((t) => { $('#tab-' + t).hidden = b.dataset.tab !== t; });
             if (b.dataset.tab === 'stats' && !window._statsRendered) {
                 initAdminStats();
                 window._statsRendered = true;
@@ -1330,7 +1538,7 @@ function initAdmin() {
     function renderUsers() {
         const list = LocalUsers.list();
         $('#tab-users').innerHTML = `<h2 class="sub-title">Пользователи · ${list.length}</h2>
-<table class="admin-table"><thead><tr><th>ID</th><th>ФИО</th><th>Email</th><th>Кафедра</th><th>Роли</th><th>Действия</th></tr></thead><tbody>
+<table class="admin-table"><colgroup><col style="width:7%"><col style="width:24%"><col style="width:22%"><col style="width:15%"><col style="width:16%"><col style="width:16%"></colgroup><thead><tr><th>ID</th><th>ФИО</th><th>Email</th><th>Кафедра</th><th>Роли</th><th>Действия</th></tr></thead><tbody>
 ${list.map((u) => `<tr data-uid="${u.id}"><td>${u.id}</td><td><a href="profile.html?id=${u.id}">${esc(u.name)}</a></td><td>${esc(u.email)}</td>
 <td>${u.dept != null && DEPT_BY_N[u.dept] ? esc(DEPT_BY_N[u.dept].t) : '—'}</td>
 <td>${Object.entries(ROLES).map(([k, r]) => {
@@ -1362,8 +1570,9 @@ ${list.map((u) => `<tr data-uid="${u.id}"><td>${u.id}</td><td><a href="profile.h
 <form class="pub-form new-dept-form" id="newDeptAdmin">
 <div class="fld-row"><label class="fld"><span>Название *</span><input id="ndaName" required></label>
 <label class="fld"><span>Направление *</span><select class="select" id="ndaFac">${FAC.map((f) => '<option>' + esc(f) + '</option>').join('')}</select></label></div>
-<div class="fld-row"><label class="fld"><span>Эмодзи</span><input id="ndaEmoji" maxlength="4"></label>
+<div class="fld-row"><label class="fld"><span>Иконка кафедры</span>${(window.OU_icons && OU_icons.iconSelectHTML) ? OU_icons.iconSelectHTML('ndaIcon', '') : '<select id="ndaIcon"></select>'}</label>
 <label class="fld"><span>Описание</span><input id="ndaDesc"></label></div>
+<div class="fld-row"><label class="fld"><span>Фото кафедры (необязательно)</span><input type="file" id="ndaPhoto" accept="image/*"></label></div>
 <div class="form-actions"><button class="file-btn" type="submit">Создать</button></div></form>
 <h2 class="sub-title">Кафедры · ${all.length}</h2>
 <table class="admin-table"><thead><tr><th>N</th><th>Название</th><th>Создатель</th><th>Действия</th></tr></thead><tbody>
@@ -1373,8 +1582,13 @@ ${all.map((d) => `<tr><td>${d.n}</td><td>${esc(d.t)}</td><td>${d.createdBy != nu
         $('#newDeptAdmin').addEventListener('submit', (e) => {
             e.preventDefault(); const name = $('#ndaName').value.trim(); if (!name) return;
             const n = LocalDepts.nextN(Math.max(...(Store.depts || []).map((d) => d.n)));
-            LocalDepts.add({ n: n, f: $('#ndaFac').value, e: $('#ndaEmoji').value.trim() || '🎓', t: name, x: $('#ndaDesc').value.trim(), d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name });
-            renderDepts();
+            const rec = { n: n, f: $('#ndaFac').value, ic: (window.OU_icons && $('#ndaIcon')) ? OU_icons.normalizeDept({ ic: $('#ndaIcon').value, f: $('#ndaFac').value }).ic : ($('#ndaIcon') ? $('#ndaIcon').value : 'cap'), t: name, x: $('#ndaDesc').value.trim(), d: 0, k: 0, a: 0, ch: 0, createdBy: USER.id, creatorName: USER.name };
+            const pfEl = $('#ndaPhoto');
+            const pf = pfEl && pfEl.files[0];
+            const finish = () => { LocalDepts.add(rec); renderDepts(); };
+            if (pf && window.OU_icons) {
+                OU_icons.readImage(pf, 320, (err, dataUrl) => { if (!err) rec.photo = dataUrl; finish(); });
+            } else finish();
         });
         $('#tab-depts').querySelectorAll('button[data-del-d]').forEach((btn) => {
             btn.addEventListener('click', () => { if (confirm('Удалить кафедру?')) { LocalDepts.remove(+btn.dataset.delD); renderDepts(); } });
@@ -1383,7 +1597,7 @@ ${all.map((d) => `<tr><td>${d.n}</td><td>${esc(d.t)}</td><td>${d.createdBy != nu
     function renderPubs() {
         const list = (Store.pubs || []).slice().sort((a, b) => b.year - a.year || a.id - b.id);
         $('#tab-pubs').innerHTML = `<h2 class="sub-title">Публикации · ${list.length}</h2>
-<table class="admin-table"><thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Действия</th></tr></thead><tbody>
+<table class="admin-table"><colgroup><col style="width:8%"><col style="width:40%"><col style="width:22%"><col style="width:30%"></colgroup><thead><tr><th>ID</th><th>Название</th><th>Статус</th><th>Действия</th></tr></thead><tbody>
 ${list.map((p) => `<tr><td>${p.id}</td><td><a href="publication.html?id=${p.id}">${esc(p.title)}</a></td>
 <td><select data-stat="${p.id}">${Object.entries(STATUS).map(([k, s]) => '<option value="' + k + '"' + (p.status === k ? ' selected' : '') + '>' + esc(s.label) + '</option>').join('')}</select></td>
 <td class="admin-actions"><button data-save-stat="${p.id}">Сменить</button><button class="danger" data-del-p="${p.id}">Удалить</button></td></tr>`).join('')}
@@ -1395,7 +1609,131 @@ ${list.map((p) => `<tr><td>${p.id}</td><td><a href="publication.html?id=${p.id}"
             btn.addEventListener('click', () => { if (confirm('Удалить?')) { LocalPubs.remove(+btn.dataset.delP); renderPubs(); } });
         });
     }
-    renderUsers(); renderDepts(); renderPubs();
+    // ---------- ЖАЛОБЫ (вкладка администрации) ----------
+    const cmpState = { filter: 'all', q: '' };
+    function updateCmpBadge() {
+        const badge = $('#cmpTabBadge');
+        if (!badge) return;
+        const n = LocalComplaints.list().filter((c) => !c.read && c.status !== 'closed').length;
+        badge.textContent = n || '';
+        badge.hidden = !n;
+    }
+    function renderComplaints() {
+        const all = LocalComplaints.list().slice().sort((a, b) => (b._ts || 0) - (a._ts || 0));
+        const counts = { all: all.length, new: 0, doing: 0, closed: 0 };
+        all.forEach((c) => { counts[c.status || 'new'] = (counts[c.status || 'new'] || 0) + 1; });
+        let list = all;
+        if (cmpState.filter !== 'all') list = list.filter((c) => (c.status || 'new') === cmpState.filter);
+        if (cmpState.q) {
+            const q = cmpState.q.toLowerCase();
+            list = list.filter((c) => [c.name, c.email, c.text, cmpTypeLabel(c.type)].join(' ').toLowerCase().includes(q));
+        }
+        $('#tab-complaints').innerHTML = `
+<h2 class="sub-title">Жалобы и обращения · ${all.length}</h2>
+<div class="cmp-admin-toolbar">
+${[['all', 'Все'], ['new', 'Новые'], ['doing', 'В работе'], ['closed', 'Закрытые']].map(([k, l]) =>
+    '<button class="fbtn' + (cmpState.filter === k ? ' on' : '') + '" data-cmpf="' + k + '">' + l + ' <small>' + (counts[k] || 0) + '</small></button>').join('')}
+<input id="cmpSearch" class="cmp-search" type="search" placeholder="поиск по жалобам…" value="${esc(cmpState.q)}">
+<button class="btn" id="cmpExport" type="button" title="Скачать CSV">CSV</button>
+</div>
+<div id="cmpAdminList">
+${list.length ? list.map((c) => `
+<article class="cmp-card${c.read ? '' : ' unread'}" data-cmp="${c.id}">
+<div class="cmp-card-head">
+<span class="status ${COMPLAINT_STATUS[c.status || 'new'].cls}">${COMPLAINT_STATUS[c.status || 'new'].label}</span>
+<b class="cmp-card-topic">${esc(cmpTypeLabel(c.type))}</b>
+<span class="cmp-card-date">${cmpDate(c._ts)}</span>
+${c.read ? '' : '<span class="cmp-new-tag">новая</span>'}
+</div>
+<div class="cmp-card-meta">
+от <b>${esc(c.fromName || c.name || '—')}</b>${c.uid ? ' (<a href="profile.html?id=' + c.uid + '">страница</a>)' : ''} ·
+<a href="mailto:${esc(c.email)}">${esc(c.email)}</a>${c.page ? ' · со страницы <code>' + esc(c.page.replace(/^https?:\/\//, '')) + '</code>' : ''}
+</div>
+<p class="cmp-card-text">${esc(c.text)}</p>
+${c.reply ? '<div class="cmp-reply"><small>Ответ администрации · ' + cmpDate(c.replyAt || c._ts) + '</small>' + esc(c.reply) + '</div>' : ''}
+<div class="cmp-card-actions">
+<select data-cmpstat="${c.id}">${Object.entries(COMPLAINT_STATUS).map(([k, s]) => '<option value="' + k + '"' + ((c.status || 'new') === k ? ' selected' : '') + '>' + s.label + '</option>').join('')}</select>
+<button type="button" data-cmpraw="${c.id}">↩ Ответить</button>
+<button type="button" class="danger" data-cmpdel="${c.id}">Удалить</button>
+</div>
+<div class="cmp-reply-box" data-cmpreply="${c.id}" hidden>
+<textarea rows="4" maxlength="2000" placeholder="Текст ответа пользователю…"></textarea>
+<div class="form-actions"><button class="file-btn" type="button" data-cmpsend="${c.id}">Отправить ответ</button></div>
+</div>
+</article>`).join('') : '<div class="empty">' + (all.length ? 'Ничего не найдено.' : 'Жалоб пока нет — письма с формы «Письмо администрации» появятся здесь.') + '</div>'}
+</div>`;
+
+        $('#tab-complaints').querySelectorAll('[data-cmpf]').forEach((b) => {
+            b.addEventListener('click', () => { cmpState.filter = b.dataset.cmpf; renderComplaints(); });
+        });
+        const search = $('#cmpSearch');
+        search.addEventListener('input', () => {
+            cmpState.q = search.value.trim();
+            clearTimeout(search._t);
+            search._t = setTimeout(renderComplaints, 250);
+            const pos = search.selectionStart; search.focus(); try { search.setSelectionRange(pos, pos); } catch (e) {}
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpstat]').forEach((sel) => {
+            sel.addEventListener('change', () => {
+                LocalComplaints.update(+sel.dataset.cmpstat, { status: sel.value, read: true });
+                updateCmpBadge(); renderComplaints();
+            });
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpraw]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const box = $('#tab-complaints').querySelector('[data-cmpreply="' + btn.dataset.cmpraw + '"]');
+                if (box) { box.hidden = !box.hidden; if (!box.hidden) box.querySelector('textarea').focus(); }
+            });
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpsend]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                const id = +btn.dataset.cmpsend;
+                const box = $('#tab-complaints').querySelector('[data-cmpreply="' + id + '"]');
+                const text = box.querySelector('textarea').value.trim();
+                if (text.length < 3) { alert('Напишите текст ответа.'); return; }
+                LocalComplaints.update(id, { reply: text, replyAt: _ts(), read: true });
+                alert('Ответ сохранён. Пользователь увидит его в разделе «Мои обращения».');
+                updateCmpBadge(); renderComplaints();
+            });
+        });
+        $('#tab-complaints').querySelectorAll('[data-cmpdel]').forEach((btn) => {
+            btn.addEventListener('click', () => {
+                if (confirm('Удалить обращение безвозвратно?')) {
+                    LocalComplaints.remove(+btn.dataset.cmpdel);
+                    updateCmpBadge(); renderComplaints();
+                }
+            });
+        });
+        // открытие карточки = «прочитано»
+        $('#tab-complaints').querySelectorAll('.cmp-card.unread').forEach((card) => {
+            card.addEventListener('click', (e) => {
+                if (e.target.closest('button, select, a, textarea')) return;
+                LocalComplaints.update(+card.dataset.cmp, { read: true });
+                card.classList.remove('unread');
+                const tag = card.querySelector('.cmp-new-tag'); if (tag) tag.remove();
+                updateCmpBadge();
+            });
+        });
+        $('#cmpExport').addEventListener('click', () => {
+            const rows = [['ID', 'Дата', 'Тема', 'Статус', 'Имя', 'Email', 'Текст', 'Ответ']];
+            all.forEach((c) => rows.push([
+                c.id, new Date(c._ts).toLocaleString('ru-RU'), cmpTypeLabel(c.type),
+                (COMPLAINT_STATUS[c.status || 'new'] || COMPLAINT_STATUS.new).label,
+                c.name || '', c.email || '', c.text || '', c.reply || ''
+            ]));
+            const csv = rows.map((r) => r.map((cell) => {
+                const s = String(cell == null ? '' : cell);
+                return /[",\n;]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+            }).join(';')).join('\n');
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url; a.download = 'complaints.csv';
+            document.body.appendChild(a); a.click(); a.remove();
+            URL.revokeObjectURL(url);
+        });
+    }
+    renderUsers(); renderDepts(); renderPubs(); renderComplaints(); updateCmpBadge();
 }
 
 // ============================================================
@@ -1802,8 +2140,10 @@ function initChats() {
     };
     function renderList() {
         const list = partners();
-        $('#chatsList').innerHTML = list.map((it) =>
-            '<div class="chat-item' + (it.p.id === current ? ' on' : '') + '" data-chat="' + it.p.id + '"><b>' + esc(it.p.name) + '</b><small>' + (it.last ? esc(it.last.text) : 'нет сообщений') + '</small></div>'
+        $('#chatsList').innerHTML = list.map((it) => {
+            let un = 0; try { un = Notifications.chatUnreadFrom(it.p.id); } catch (e) {}
+            return '<div class="chat-item' + (it.p.id === current ? ' on' : '') + '" data-chat="' + it.p.id + '"><b>' + esc(it.p.name) + '</b><small>' + (it.last ? esc(it.last.text) : 'нет сообщений') + '</small>' + (un > 0 ? '<span class="dd-badge">' + (un > 99 ? '99+' : un) + '</span>' : '') + '</div>';
+        }
         ).join('') || '<div class="empty">Чатов пока нет.</div>';
         $('#chatsList').querySelectorAll('[data-chat]').forEach((el) => { el.addEventListener('click', () => openChat(+el.dataset.chat)); });
     }
@@ -1813,15 +2153,52 @@ function initChats() {
         $('#chatName').textContent = p ? p.name : '';
         $('#chatThread').innerHTML = LocalMessages.between(USER.id, current).map((m) =>
             '<div class="msg' + (m.from === USER.id ? ' me' : '') + '"><small>' + esc(m.fromName) + ' · ' + new Date(m._ts).toLocaleDateString('ru-RU') + (m._edited ? ' · изменено' : '') + '</small>' +
-            esc(m.text) + (m.from === USER.id ? '<span class="msg-act"><button type="button" data-ed="' + m.id + '">✎</button><button type="button" data-del="' + m.id + '"></button></span>' : '') + '</div>'
+            '<span class="msg-text">' + esc(m.text) + '</span>' +
+            (m.from === USER.id ? '<button type="button" class="msg-edit-btn" data-ed="' + m.id + '" title="Редактировать" aria-label="Редактировать сообщение">' +
+                '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.2-4L16 5.2 18.8 8 8 18.8 4 20z"/><path d="m14 7 3 3"/></svg>' +
+                '</button>' : '') +
+            '</div>'
         ).join('') || '<div class="empty">Напишите первым.</div>';
     }
+    /* инлайн-редактирование: клик по карандашу на краю сообщения */
     $('#chatThread').addEventListener('click', (e) => {
-        const ed = e.target.closest('[data-ed]'); const del = e.target.closest('[data-del]');
-        if (ed) { const m = LocalMessages.list().find((x) => x.id === +ed.dataset.ed); if (!m) return; const t = prompt('Редактировать:', m.text); if (t !== null && t.trim()) { LocalMessages.update(m.id, { text: t.trim() }); renderThread(); renderList(); } }
-        if (del) { if (confirm('Удалить?')) { LocalMessages.remove(+del.dataset.del); renderThread(); renderList(); } }
+        const ed = e.target.closest('[data-ed]');
+        if (!ed) return;
+        const msgEl = ed.closest('.msg');
+        const textEl = msgEl && msgEl.querySelector('.msg-text');
+        const m = LocalMessages.list().find((x) => x.id === +ed.dataset.ed);
+        if (!m || !textEl || msgEl.querySelector('textarea')) return;
+        const ta = document.createElement('textarea');
+        ta.className = 'msg-edit-area';
+        ta.value = m.text;
+        ta.rows = Math.min(6, Math.max(2, m.text.split('\n').length));
+        const actions = document.createElement('div');
+        actions.className = 'msg-edit-actions';
+        actions.innerHTML = '<button type="button" class="msg-edit-save">Сохранить</button>' +
+            '<button type="button" class="msg-edit-cancel">Отмена</button>' +
+            '<span class="msg-edit-hint">Enter — сохранить · Esc — отмена</span>';
+        textEl.replaceWith(ta, actions);
+        ta.focus();
+        ta.setSelectionRange(ta.value.length, ta.value.length);
+        let done = false;
+        const finish = (save) => {
+            if (done) return; done = true;
+            const v = ta.value.trim();
+            if (save && v && v !== m.text) {
+                LocalMessages.update(m.id, { text: v, _edited: true });
+                renderThread(); renderList();
+            } else {
+                renderThread();
+            }
+        };
+        actions.querySelector('.msg-edit-save').addEventListener('click', () => finish(true));
+        actions.querySelector('.msg-edit-cancel').addEventListener('click', () => finish(false));
+        ta.addEventListener('keydown', (ev) => {
+            if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); finish(true); }
+            if (ev.key === 'Escape') { ev.preventDefault(); finish(false); }
+        });
     });
-    function openChat(pid) { current = pid; $('#noChat').hidden = true; $('#chatView').hidden = false; wrap.classList.add('chat-open'); renderList(); renderThread(); }
+    function openChat(pid) { current = pid; $('#noChat').hidden = true; $('#chatView').hidden = false; wrap.classList.add('chat-open'); renderList(); renderThread(); try { Notifications.markChatSeen(pid); } catch (e) {} if (window.OU_badges) window.OU_badges.refresh(); }
     bindAutocomplete($('#newChatInput'), $('#newChatDrop'), (Store.people || []).filter((x) => x.id !== USER.id), () => false,
         (short) => { const p = personByShort(short); if (p) openChat(p.id); });
     $('#chatBack').addEventListener('click', () => { wrap.classList.remove('chat-open'); current = null; $('#chatView').hidden = true; $('#noChat').hidden = false; renderList(); });
@@ -1851,11 +2228,6 @@ function initKafedry() {
         'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
         'Психология': '#E76F51', 'Языки': '#264653'
     };
-    const icons = {
-        'Математика': '📐', 'Информатика': '💻', 'Физика': '',
-        'Химия': '', 'Гуманитарные науки': '📜', 'Экономика': '💼',
-        'Психология': '🧠', 'Языки': '🌍'
-    };
 
 function cardHTML(c) {
   const s = deptStats(c.n);
@@ -1863,7 +2235,7 @@ function cardHTML(c) {
   return `
   <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}" title="${esc(c.x || '')}">
     <div class="card-emoji" aria-hidden="true">
-      <span class="emoji-icon">${esc(c.e || '🎓')}</span>
+      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
@@ -1895,7 +2267,7 @@ const INIT = {
     home: initHome, people: initPeople, person: initProfile, me: initProfile,
     dept: initDept, deptpage: initDeptPage, pubs: initPubs, allpubs: initAllPubs,
     pub: initPub, pubnew: initPubEdit, requests: initRequests, newreq: initNewRequest,
-    auth: initAuth, admin: initAdmin, chats: initChats, kafedry: initKafedry
+    auth: initAuth, admin: initAdmin, chats: initChats, kafedry: initKafedry, complaint: initComplaint
 };
 const page = document.body.dataset.page || 'home';
 const loadBox = $('#cards') || $('#staff');
@@ -1907,6 +2279,8 @@ Store.loadAll()
         initSearch();
         INIT[page]();
         if (window.OU_theme) window.OU_theme.refresh();
+        /* централизованный пересчёт бейджей по РЕАЛЬНЫМ загруженным данным */
+        if (window.OU_badges) window.OU_badges.refresh();
     })
     .catch((err) => {
         console.error(err);

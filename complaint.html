@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Жалоба администрации — Open University</title>
+<meta name="description" content="Написать письмо администрации университета: жалоба, проблема или предложение.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css">
+</head>
+<body data-page="complaint">
+
+<header class="hd" id="hd"></header>
+
+<div class="frame">
+  <nav class="subnav" id="subnav" aria-label="Разделы"></nav>
+
+  <main class="content">
+    <div class="page-head">
+      <h1 class="page-title">Письмо администрации</h1>
+      <p class="page-note">Жалобы, технические проблемы и предложения — администраторы увидят их в админ-панели и ответят в чате или по почте.</p>
+    </div>
+
+    <form id="cmpForm" class="pub-form cmp-form" novalidate>
+      <div class="fld-row">
+        <label class="fld"><span>Ваше имя *</span><input id="cmpName" maxlength="80" autocomplete="name" required></label>
+        <label class="fld"><span>Email для ответа *</span><input id="cmpEmail" type="email" maxlength="120" autocomplete="email" required></label>
+      </div>
+
+      <div class="fld">
+        <span>Тема обращения *</span>
+        <select class="select" id="cmpType"></select>
+      </div>
+
+      <div class="fld">
+        <span>Сообщение * <small class="cmp-counter" id="cmpCounter">0 / 2000</small></span>
+        <textarea id="cmpText" rows="7" maxlength="2000" required placeholder="Опишите проблему как можно подробнее: что произошло, где, когда…"></textarea>
+      </div>
+
+      <div class="form-actions">
+        <button class="file-btn" type="submit">Отправить письмо</button>
+      </div>
+      <p class="cmp-hint">Отправляя обращение, вы соглашаетесь на его обработку администрацией сайта.</p>
+    </form>
+
+    <div class="cmp-success" id="cmpSuccess" hidden>
+      <div class="cmp-success-icon" aria-hidden="true">✉️</div>
+      <h2 class="sub-title">Письмо отправлено</h2>
+      <p>Спасибо! Обращение зарегистрировано. Администрация ответит на указанный email в течение 2 рабочих дней.</p>
+      <div class="form-actions">
+        <button class="file-btn" type="button" id="cmpAgain">Написать ещё</button>
+        <a class="btn" href="index.html">На главную</a>
+      </div>
+    </div>
+
+    <section class="cmp-mine" id="cmpMine" hidden>
+      <h2 class="sub-title">Мои обращения</h2>
+      <div id="cmpMineList"></div>
+    </section>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/store.js"></script>
+<script src="js/icons.js"></script>
+<script src="js/layout.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
