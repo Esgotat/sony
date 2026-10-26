@@ -510,7 +510,8 @@ function deptCardHTML(c) {
 // ============================================================
 function initPeople() {
     const pre = params.get('role');
-    const isFriendsMode = params.get('mode') === 'friends';
+    const isFriendsMode = params.get('mode') === 'friends' ||
+        (location.pathname.indexOf('znakomye') !== -1 && !params.get('role'));
     const state = {
         role: ['rev', 'res', 'sup', 'trn', 'adm'].includes(pre) ? pre : 'Все',
         friendsOnly: isFriendsMode
@@ -861,10 +862,16 @@ function initPubs() {
     
     const me = effectiveUser();
     if (can(me, 'publish')) {
-        const countEl = $('#count');
-        if (countEl) {
-            countEl.insertAdjacentHTML('beforebegin',
+        const ph = $('.page-head');
+        if (ph) {
+            ph.insertAdjacentHTML('beforeend',
                 '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
+        } else {
+            const countEl = $('#count');
+            if (countEl) {
+                countEl.insertAdjacentHTML('beforebegin',
+                    '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
+            }
         }
     }
     
@@ -898,8 +905,12 @@ function initAllPubs() {
     const pre = params.get('status');
     const q = (params.get('q') || '').trim().toLowerCase();
     const state = { status: STATUS[pre] ? pre : 'Все' };
-    if (can(effectiveUser(), 'publish'))
-        $('#count').insertAdjacentHTML('beforebegin', '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
+    if (can(effectiveUser(), 'publish')) {
+        const cbtn = '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>';
+        const ph = $('.page-head');
+        if (ph) ph.insertAdjacentHTML('beforeend', cbtn);
+        else $('#count').insertAdjacentHTML('beforebegin', cbtn);
+    }
     function render() {
         let list = sortPubs(Store.pubs);
         if (state.status !== 'Все') list = list.filter((p) => p.status === state.status);
