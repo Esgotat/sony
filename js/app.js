@@ -938,6 +938,8 @@ function initPub() {
     const p = (Store.pubs || []).find((x) => x.id === id);
     const box = $('#pubDetail');
     if (!p) { box.innerHTML = '<div class="empty">Публикация не найдена.</div>'; return; }
+    try { Notifications.markPubSeen(p.id); } catch (e) {}
+    if (window.OU_badges) window.OU_badges.refresh();
     const me = effectiveUser();
     const st = STATUS[p.status] || STATUS.wait;
     const dept = DEPT_BY_N[p.dept];
@@ -1222,6 +1224,8 @@ function initRequests() {
         state.type, (k) => { state.type = k; render(); }
     );
     render();
+    try { Notifications.markRequestsSeen(); } catch (e) {}
+    if (window.OU_badges) window.OU_badges.refresh();
 }
 
 function initNewRequest() {
@@ -1411,6 +1415,8 @@ ${c.reply ? '<div class="cmp-reply"><small>Ответ администрации
     });
 
     renderMine();
+    try { Notifications.markComplaintsSeen(); } catch (e) {}
+    if (window.OU_badges) window.OU_badges.refresh();
 }
 
 // ============================================================
@@ -2030,8 +2036,10 @@ function initChats() {
     };
     function renderList() {
         const list = partners();
-        $('#chatsList').innerHTML = list.map((it) =>
-            '<div class="chat-item' + (it.p.id === current ? ' on' : '') + '" data-chat="' + it.p.id + '"><b>' + esc(it.p.name) + '</b><small>' + (it.last ? esc(it.last.text) : 'нет сообщений') + '</small></div>'
+        $('#chatsList').innerHTML = list.map((it) => {
+            let un = 0; try { un = Notifications.chatUnreadFrom(it.p.id); } catch (e) {}
+            return '<div class="chat-item' + (it.p.id === current ? ' on' : '') + '" data-chat="' + it.p.id + '"><b>' + esc(it.p.name) + '</b><small>' + (it.last ? esc(it.last.text) : 'нет сообщений') + '</small>' + (un > 0 ? '<span class="dd-badge">' + (un > 99 ? '99+' : un) + '</span>' : '') + '</div>';
+        }
         ).join('') || '<div class="empty">Чатов пока нет.</div>';
         $('#chatsList').querySelectorAll('[data-chat]').forEach((el) => { el.addEventListener('click', () => openChat(+el.dataset.chat)); });
     }
@@ -2049,7 +2057,7 @@ function initChats() {
         if (ed) { const m = LocalMessages.list().find((x) => x.id === +ed.dataset.ed); if (!m) return; const t = prompt('Редактировать:', m.text); if (t !== null && t.trim()) { LocalMessages.update(m.id, { text: t.trim() }); renderThread(); renderList(); } }
         if (del) { if (confirm('Удалить?')) { LocalMessages.remove(+del.dataset.del); renderThread(); renderList(); } }
     });
-    function openChat(pid) { current = pid; $('#noChat').hidden = true; $('#chatView').hidden = false; wrap.classList.add('chat-open'); renderList(); renderThread(); }
+    function openChat(pid) { current = pid; $('#noChat').hidden = true; $('#chatView').hidden = false; wrap.classList.add('chat-open'); renderList(); renderThread(); try { Notifications.markChatSeen(pid); } catch (e) {} if (window.OU_badges) window.OU_badges.refresh(); }
     bindAutocomplete($('#newChatInput'), $('#newChatDrop'), (Store.people || []).filter((x) => x.id !== USER.id), () => false,
         (short) => { const p = personByShort(short); if (p) openChat(p.id); });
     $('#chatBack').addEventListener('click', () => { wrap.classList.remove('chat-open'); current = null; $('#chatView').hidden = true; $('#noChat').hidden = false; renderList(); });

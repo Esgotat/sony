@@ -898,8 +898,9 @@ html[data-theme='dark'] { --bg:#111; --bg-2:#1A1A1A; --ink:#E8E6E1; --muted:#888
 .cmp-reply-box textarea { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line); border-radius: 6px; background: var(--bg-2); color: var(--ink); font: inherit; font-size: 13px; resize: vertical; }
 .cmp-reply-box textarea:focus { outline: none; border-color: var(--accent); }
 
-.tab-badge { display: inline-block; min-width: 18px; padding: 1px 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; vertical-align: middle; }
-.hd-badge { display: inline-block; min-width: 17px; padding: 1px 5px; border-radius: 9px; background: var(--accent); color: #fff; font-size: 10px; font-weight: 700; text-align: center; }
+.tab-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; border-radius: 4px; background: #D64545; color: #fff; font: 800 11px/1 var(--font-m); vertical-align: middle; }
+.hd-badge { flex: none; margin-left: auto; min-width: 20px; height: 20px; padding: 0 5px; box-sizing: border-box; display: inline-flex; align-items: center; justify-content: center; background: #D64545; color: #fff; font: 800 11px/1 var(--font-m); border-radius: 4px; }
+.hd-badge[hidden] { display: none !important; }
 
 .cmp-admin-toolbar .btn { padding: 8px 14px; border: 1px solid var(--line); border-radius: 5px; background: var(--paper); color: var(--ink); font: 700 11px/1 var(--font-b); letter-spacing: .06em; text-transform: uppercase; cursor: pointer; min-height: 36px; }
 .cmp-admin-toolbar .btn:hover { border-color: var(--accent); color: var(--accent); }

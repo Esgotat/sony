@@ -603,6 +603,10 @@ const Store = {
       });
 
       return this;
+    }).then((res) => {
+      /* событие для пересчёта бейджей уведомлений по РЕАЛЬНЫМ загруженным данным */
+      try { window.dispatchEvent(new Event('ou:data')); } catch (e) {}
+      return res;
     }));
   }
 };

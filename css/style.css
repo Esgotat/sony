@@ -187,7 +187,10 @@ overflow: hidden;
 /* тап-режим (мобильные): класс .open ставит layout.js */
 .dd.open > .dd-menu { display: block !important; }
 .dd-menu a {
-display: block;
+display: flex;
+align-items: center;
+justify-content: space-between;
+gap: 10px;
 padding: 10px 16px;
 font: 500 11px/1.2 var(--font-b);
 letter-spacing: 0.06em;
@@ -196,8 +199,28 @@ text-decoration: none;
 border-bottom: 1px solid var(--line);
 transition: all 0.15s ease;
 }
+.dd-menu a .dd-label { flex: 1 1 auto; min-width: 0; }
 .dd-menu a:last-child { border-bottom: none; }
 .dd-menu a:hover { background: var(--bg-2); color: var(--accent); }
+
+/* ---------- БЕЙДЖИ УВЕДОМЛЕНИЙ (красный квадратик справа от текста строки) ---------- */
+.dd-badge, .hd-badge {
+flex: none;
+margin-left: auto;
+min-width: 20px;
+height: 20px;
+padding: 0 5px;
+box-sizing: border-box;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+background: #D64545;
+color: #FFF;
+font: 800 11px/1 var(--font-m);
+border-radius: 4px;
+}
+.dd-badge[hidden], .hd-badge[hidden] { display: none !important; }
+.hd-badge { margin-left: 7px; vertical-align: middle; }
 
 /* ---------- КОНТЕНТ ---------- */
 .content { padding: 32px 28px 48px; }
@@ -367,14 +390,19 @@ font-size: 16px;
 border: none;
 border-radius: 4px;
 font-weight: 800;
-background: transparent;
 display: inline-grid;
 place-items: center;
 }
-.stat .b-d  { color: #2D6A4F; }
-.stat .b-k  { color: #B8860B; }
-.stat .b-a  { color: #457B9D; }
-.stat .b-ch { color: #C41E3A; }
+/* цветные квадратики статусов НЕ перекрываются прозрачным фоном */
+.stat .b.b-d  { background: transparent; color: #2D6A4F; }
+.stat .b.b-k  { background: transparent; color: #B8860B; }
+.stat .b.b-a  { background: transparent; color: #457B9D; }
+.stat .b.b-ch { background: transparent; color: #C41E3A; }
+.stat .b.b-res { background: var(--bk); color: #FFF; }
+.stat .b.b-rev { background: var(--bd); color: #FFF; }
+.stat .b.b-sup { background: var(--ba); color: #FFF; }
+.stat .b.b-trn { background: #3E6C8E; color: #FFF; }
+.stat .b.b-adm { background: var(--adm, #6B2D5C); color: #FFF; }
 .card-title { font: 600 13px/1.35 var(--font-h); }
 .card-title a { text-decoration: none; color: inherit; transition: color 0.15s ease; }
 .card-title a:hover { color: var(--accent); }
