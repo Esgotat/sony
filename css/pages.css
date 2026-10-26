@@ -689,7 +689,7 @@ font-size: 14px;
 }
 .theme-menu {
 position: fixed;
-top: 60px;
+top: calc(64px + env(safe-area-inset-top));
 right: 16px;
 background: var(--bg);
 border: 2px solid var(--ink);
@@ -725,18 +725,56 @@ border: 2px solid var(--ink);
 flex: none;
 }
 
+/* ---------- ВЫПАДАШКА ПОИСКА ---------- */
+.search-drop {
+position: absolute;
+top: calc(100% + 6px);
+right: 28px;
+width: min(420px, calc(100vw - 32px));
+background: var(--bg);
+border: 1px solid var(--line);
+border-radius: 6px;
+box-shadow: 0 12px 32px rgba(0,0,0,.16);
+z-index: 120;
+max-height: 70vh;
+overflow-y: auto;
+padding: 6px 0;
+}
+.sd-group {
+font: 700 9px/1 var(--font-m);
+letter-spacing: .15em;
+text-transform: uppercase;
+color: var(--muted);
+padding: 10px 16px 6px;
+}
+.sd-item {
+display: block;
+padding: 9px 16px;
+text-decoration: none;
+color: var(--ink);
+font-size: 13px;
+line-height: 1.3;
+}
+.sd-item:hover { background: var(--bg-2); color: var(--accent); }
+.sd-item small { display: block; font: 500 10px/1.2 var(--font-m); color: var(--muted); margin-top: 3px; }
+.sd-none { padding: 14px 16px; color: var(--muted); font-size: 12px; }
+@media (max-width: 640px) {
+.search-drop { right: 16px; left: 16px; width: auto; }
+}
+
 /* ---------- ДРОПДАУН КАБИНЕТ ---------- */
 .hd-dd { position: relative; }
 .hd-dd-btn {
+user-select: none;
 font: 600 11px/1 var(--font-b);
 letter-spacing: 0.08em;
 text-transform: uppercase;
 text-decoration: none;
 padding: 10px 16px;
-border-bottom: 2px solid transparent;
+box-shadow: inset 0 -2px 0 transparent;
 display: inline-block;
 }
-.hd-dd-btn.on { border-bottom-color: var(--accent); }
+.hd-dd-btn.on { box-shadow: inset 0 -2px 0 var(--accent); }
 .hd-dd-menu {
 position: absolute;
 top: 100%; left: 0;
@@ -794,9 +832,9 @@ html[data-theme='dark'] { --bg:#111; --bg-2:#1A1A1A; --ink:#E8E6E1; --muted:#888
 }
 @media (max-width: 640px) {
 .content { padding: 20px 16px 32px; }
-.subnav { padding: 10px 16px; gap: 16px; }
-.dd { position: static; }
-.dd-menu { left: 0; right: 0; }
+/* убрано: см. аккордеон в style.css */
+/* убрано: см. аккордеон в style.css */
+/* убрано: см. аккордеон в style.css */
 .page-title { font-size: 22px; }
 .legend { gap: 10px; padding: 8px 12px; }
 .cards { grid-template-columns: 1fr; gap: 16px; }
@@ -814,4 +852,7 @@ html[data-theme='dark'] { --bg:#111; --bg-2:#1A1A1A; --ink:#E8E6E1; --muted:#888
 .pub-title { font-size: 22px; }
 .dept-title { font-size: 18px; }
 .theme-menu { position: fixed; top: auto; bottom: 0; left: 0; right: 0; max-height: 60vh; border-radius: 12px 12px 0 0; }
+.hd-nav > a { display: flex; width: 100%; border-bottom: 1px solid var(--line); }
+.hd-nav > a:last-child { border-bottom: none; }
+.hd-nav a.me-page, .hd-nav a.me-link { border-radius: 0; }
 }

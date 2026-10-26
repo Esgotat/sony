@@ -896,15 +896,17 @@ function initPubs() {
 // ============================================================
 function initAllPubs() {
     const pre = params.get('status');
+    const q = (params.get('q') || '').trim().toLowerCase();
     const state = { status: STATUS[pre] ? pre : 'Все' };
     if (can(effectiveUser(), 'publish'))
         $('#count').insertAdjacentHTML('beforebegin', '<a class="create-btn" href="new-publication.html">+ Создать публикацию</a>');
     function render() {
         let list = sortPubs(Store.pubs);
         if (state.status !== 'Все') list = list.filter((p) => p.status === state.status);
+        if (q) list = list.filter((p) => matches(q, p.title, p.authors, p.venue || '', p.abstract || ''));
         $('#cards').innerHTML = list.map(pubCard).join('');
         stagger($('#cards').querySelectorAll('.card'));
-        $('#count').textContent = list.length + ' ' + plural(list.length, ['публикация', 'публикации', 'публикаций']);
+        $('#count').textContent = list.length + ' ' + plural(list.length, ['публикация', 'публикации', 'публикаций']) + (q ? ' по запросу «' + q + '»' : '');
         $('#empty').hidden = list.length !== 0;
     }
     buildFilters(
