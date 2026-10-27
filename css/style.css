@@ -103,10 +103,14 @@ transition: all 0.2s ease;
 .hd-dd-btn:hover::after, .hd-dd-btn.on::after {
 content: "";
 position: absolute;
-left: 12px; right: 12px; bottom: 3px;
+left: 16px; right: 16px; bottom: 4px;
 height: 2px;
 background: currentColor;
 border-radius: 2px;
+}
+/* «Кабинет» на мобильных — как остальные пункты навигации */
+@media (max-width: 900px) {
+.hd-dd-btn { padding: 8px 10px; font-size: 10px; }
 }
 .hd-nav a.me-page {
 background: var(--dark);
@@ -727,19 +731,14 @@ border-bottom: 1px dashed var(--line);
 .hd-nav > a { min-height: 40px; width: 100%; border-bottom: 1px solid var(--line); padding: 10px 6px; font-size: 12px; }
 .hd-nav > a.me-page, .hd-nav > a.me-link { justify-content: space-between; }
 .hd-nav > a:last-of-type { border-bottom: none; }
-/* на телефоне линия-подчёркивание не нужна — есть разделители строк */
-.hd-nav a:hover::after, .hd-nav a.on::after,
-.hd-dd-btn:hover::after, .hd-dd-btn.on::after { content: none; }
-.hd-nav a.on { color: var(--accent); }
-.hd-dd { width: 100%; order: 5; border-top: 1px solid var(--line); }
+/* «Кабинет» на телефоне — как обычный пункт навигации (без инлайновых аккордеон-стилей) */
 .hd-dd-btn {
 display: flex;
 align-items: center;
 justify-content: space-between;
 width: 100%;
-min-height: 44px;
+min-height: 40px;
 padding: 10px 6px;
-border-bottom: none;
 font-size: 12px;
 }
 .hd-dd.open > .hd-dd-btn .caret { transform: rotate(180deg); }

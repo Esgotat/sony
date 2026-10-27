@@ -40,7 +40,7 @@ border-radius: 4px;
 .select {
 width: 100%;
 padding: 10px 12px;
-font: 400 13px/1.5 var(--font-b);
+font: 400 15px/1.5 var(--font-b);
 border: 1px solid var(--line);
 border-radius: 4px;
 background: var(--bg);
@@ -233,17 +233,22 @@ color: var(--ink);
 .avatar-svg { display: block; border-radius: 50%; }
 .card.person-card .card-emoji .avatar-svg { width: 96px; height: 96px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
 
-/* Загруженные фото пользователей — везде показываются как круглые аватарки */
+/* Загруженные фото пользователей — везде показываются как круглые аватарки.
+   width/height в % + min-размеры гарантируют видимую картинку даже если у
+   контейнера (.card-emoji) не задана фиксированная высота (напр. flex-раскладка). */
 img.avatar-svg,
 .avatar-photo {
+  display: block;
   width: 100%;
   height: 100%;
+  min-width: 48px;
+  min-height: 48px;
   object-fit: cover;
   border-radius: 50%;
   background: #fff;
 }
 .card.person-card .card-emoji img.avatar-svg,
-.card.person-card .card-emoji .avatar-photo { width: 96px; height: 96px; }
+.card.person-card .card-emoji .avatar-photo { width: 96px; height: 96px; min-width: 96px; min-height: 96px; }
 img.avatar-big,
 .avatar-photo.avatar-big { width: 80px; height: 80px; border: 3px solid var(--ink); border-radius: 50%; }
 /* фото на карточке человека — круглая аватарка, заполняет область картинки */
@@ -395,8 +400,8 @@ border-radius: 6px;
 .fld { display: block; margin-bottom: 16px; }
 .fld > span {
 display: block;
-font: 700 10px/1 var(--font-m);
-letter-spacing: 0.12em;
+font: 700 12px/1.3 var(--font-b);
+letter-spacing: 0.06em;
 text-transform: uppercase;
 color: var(--muted);
 margin-bottom: 8px;
@@ -404,7 +409,7 @@ margin-bottom: 8px;
 .fld input, .fld textarea {
 width: 100%;
 padding: 10px 12px;
-font: 400 13px/1.5 var(--font-b);
+font: 400 15px/1.5 var(--font-b);
 border: 1px solid var(--line);
 border-radius: 4px;
 background: var(--bg);
@@ -414,7 +419,7 @@ resize: vertical;
 .fld input:focus, .fld textarea:focus { outline: none; border-color: var(--accent); }
 .fld-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
 .form-actions { margin-top: 20px; display: flex; gap: 10px; }
-.file-hint { display: block; font: 500 10px/1 var(--font-m); color: var(--muted); margin-top: 6px; }
+.file-hint { display: block; font: 400 13px/1.5 var(--font-b); color: var(--muted); margin-top: 6px; }
 
 /* ---------- ИНТЕРЕСЫ ---------- */
 .ints { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
@@ -600,7 +605,7 @@ font: 600 10px/1 var(--font-b);
 .ac-input {
 width: 100%;
 padding: 10px 12px;
-font: 400 13px/1.5 var(--font-b);
+font: 400 15px/1.5 var(--font-b);
 border: 1px solid var(--line);
 border-radius: 4px;
 background: var(--bg);
@@ -822,17 +827,22 @@ line-height: 1.3;
 
 /* ---------- ДРОПДАУН КАБИНЕТ ---------- */
 .hd-dd { position: relative; }
+/* Кнопка «Кабинет» — визуально такая же, как ссылки в навигации («Главная» и т.д.):
+   тот же шрифт, отступы, цвет текста (var(--ink)) и подчёркивание через ::after */
 .hd-dd-btn {
 user-select: none;
+background: none;
+border: none;
+cursor: pointer;
+color: var(--ink);
 font: 600 11px/1 var(--font-b);
 letter-spacing: 0.08em;
 text-transform: uppercase;
 text-decoration: none;
 padding: 10px 16px;
-box-shadow: inset 0 -2px 0 transparent;
-display: inline-block;
 }
-.hd-dd-btn.on { box-shadow: inset 0 -2px 0 var(--accent); }
+.hd-dd-btn:hover { color: var(--accent); }
+.hd-dd-btn.on { font-weight: 700; color: var(--accent); }
 .hd-dd-menu {
 position: absolute;
 top: 100%; left: 0;
