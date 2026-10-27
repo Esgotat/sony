@@ -717,10 +717,12 @@ letter-spacing: 0.15em;
 text-transform: uppercase;
 color: var(--muted);
 background: var(--bg-2);
-white-space: nowrap;
-position: sticky;
-top: 0;
-z-index: 2;
+/* без nowrap — иначе слово «Действия» в узкой колонке вылезает
+   за строку заголовка и визуально стоит «выше» остальных колонок */
+white-space: normal;
+overflow-wrap: anywhere;
+word-break: break-word;
+vertical-align: middle;
 }
 .admin-table td select, .admin-table td input {
 font: 400 11px/1.4 var(--font-b);
