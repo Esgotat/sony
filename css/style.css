@@ -60,7 +60,7 @@ gap: 20px;
 position: sticky;
 top: 0;
 z-index: 100;
-isolation: isolate;
+isolation: auto;
 padding: max(10px, env(safe-area-inset-top)) 28px 8px;
 border-bottom: 1px solid var(--line);
 flex-wrap: wrap;
@@ -658,9 +658,9 @@ place-items: center;
 @media (max-width: 900px) {
 .hd { padding: max(10px, env(safe-area-inset-top)) 18px 8px; gap: 10px; }
 .brand-line1, .brand-line2 { font-size: 18px; }
-.hd-nav { margin-left: 0; width: 100%; order: 3; gap: 0; flex-wrap: wrap; }
-.hd-nav a { padding: 8px 10px; font-size: 10px; }
-.hd-search { width: 100%; order: 2; }
+.hd-nav { margin-left: auto; width: auto; order: 2; gap: 0; flex-wrap: nowrap; }
+.hd-nav a { padding: 8px 8px; font-size: 9.5px; letter-spacing: 0.03em; }
+.hd-search { width: 150px; order: 3; flex: 0 1 150px; }
 .content { padding: 24px 18px 36px; }
 .subnav { padding: 10px 18px; gap: 20px; flex-wrap: wrap; }
 .cards { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
@@ -669,43 +669,116 @@ place-items: center;
 }
 @media (max-width: 640px) {
 .content { padding: 20px 16px 32px; }
-/* --- Подменю: аккордеон вместо hover-выпадашек.
-   На тач-экранах hover не работает, а статичное раскрытое меню
-   «уносило» соседние кнопки за экран --- */
-.subnav {
-display: grid;
-grid-template-columns: 1fr;
-gap: 0;
-padding: 6px 12px 10px;
-position: static;
+/* --- Шапка на телефоне: два компактных уровня ---
+   1-й уровень: бренд + поиск + кнопка тем
+   2-й уровень: «Моя страница · Главная · Знакомые · Моя кафедра · Кабинет · Админ · Выйти» в одну строку со скроллом
+   3-й уровень: «Кафедры · Публикации · Коллеги · Запросы» — тоже одной строкой --- */
+.hd {
+padding: max(10px, env(safe-area-inset-top)) 12px 6px;
+gap: 8px;
+row-gap: 4px;
 }
-.dd { position: relative; display: block; width: 100%; }
-.dd-btn {
+.brand { order: 1; margin-right: 0; }
+.brand-line1, .brand-line2 { font-size: 15px; }
+.hd-search { order: 2; flex: 1 1 auto; width: auto; min-width: 0; margin-left: 6px; }
+.hd-theme-wrap { order: 3; }
+.hd-nav {
+order: 4;
+width: 100%;
+margin-left: 0;
+flex-wrap: nowrap;
+overflow-x: auto;
+scrollbar-width: none;
+-webkit-overflow-scrolling: touch;
+border-bottom: 1px solid var(--line);
+}
+.hd-nav::-webkit-scrollbar { display: none; }
+.hd-nav > a {
+min-height: 0;
+width: auto;
+flex: none;
+border-bottom: none;
+padding: 9px 8px;
+font-size: 10px;
+letter-spacing: 0.03em;
+white-space: nowrap;
+}
+.hd-nav > a.me-page, .hd-nav > a.me-link { justify-content: center; padding: 7px 9px; }
+.hd-nav > a:last-of-type { border-bottom: none; }
+/* «Кабинет» в том же уровне: кнопка как обычный пункт, выпадашка поверх контента */
+.hd-dd { flex: none; position: relative; }
+.hd-dd-btn {
+display: inline-flex;
+align-items: center;
+gap: 4px;
+width: auto;
+min-height: 0;
+flex: none;
+padding: 9px 8px;
+font-size: 10px;
+letter-spacing: 0.03em;
+white-space: nowrap;
+border-bottom: none;
+}
+.hd-dd-menu {
+position: absolute;
+top: 100%;
+left: 0;
+min-width: 230px;
+border: 1px solid var(--line);
+border-radius: 6px;
+box-shadow: 0 10px 24px rgba(0,0,0,.22);
+background: var(--bg);
+margin: 0;
+z-index: 120;
+}
+.hd-dd.open > .hd-dd-menu { display: block !important; }
+.hd-dd-menu a { display: flex; align-items: center; padding: 11px 14px; min-height: 40px; }
+/* --- Подменю: компактный второй уровень навигации.
+   Пункты «Кафедры · Публикации · Коллеги · Запросы» — в одну строку
+   с горизонтальным скроллом; выпадашки открываются тапом (см. layout.js) --- */
+.subnav {
 display: flex;
+flex-wrap: nowrap;
+gap: 4px;
+padding: 4px 12px;
+position: static;
+overflow-x: auto;
+overflow-y: visible;
+scrollbar-width: none;
+-webkit-overflow-scrolling: touch;
+}
+.subnav::-webkit-scrollbar { display: none; }
+.dd { position: relative; display: block; width: auto; flex: none; }
+.dd-btn {
+display: inline-flex;
 align-items: center;
 justify-content: space-between;
-width: 100%;
-min-height: 44px;
-padding: 10px 6px;
-border-bottom: 1px solid var(--line);
-font-size: 12px;
+width: auto;
+min-height: 38px;
+flex: none;
+padding: 8px 10px;
+border-bottom: none;
+font-size: 10px;
+letter-spacing: 0.03em;
+white-space: nowrap;
 }
-.dd .caret { transition: transform 0.2s ease; margin-left: 8px; }
+.dd .caret { transition: transform 0.2s ease; margin-left: 6px; }
 .dd.open > .dd-btn .caret { transform: rotate(180deg); }
+/* выпадашка — поверх контента (не в потоке), открывается только тапом */
 .dd-menu {
-position: static;
-display: none;
-left: auto;
-right: auto;
-min-width: 0;
-box-shadow: none;
-border: none;
-border-radius: 0;
-overflow: visible;
-border-left: 2px solid var(--accent);
-background: var(--bg-2);
-margin: 4px 0 8px 8px;
-padding: 2px 0;
+position: absolute;
+top: 100%;
+left: 0;
+min-width: 210px;
+box-shadow: 0 10px 24px rgba(0,0,0,.22);
+border: 1px solid var(--line);
+border-radius: 6px;
+overflow: hidden;
+background: var(--bg);
+margin: 0;
+padding: 0;
+z-index: 130;
 }
 
 /* переопределяем desktop-правила (.dd:hover / :focus-within) —
@@ -715,43 +788,15 @@ padding: 2px 0;
 .dd-menu a {
 display: flex;
 align-items: center;
-padding: 10px 12px;
+padding: 11px 14px;
 min-height: 40px;
 font-size: 11px;
-border-bottom: 1px dashed var(--line);
+border-bottom: 1px solid var(--line);
 }
 .dd-menu a:last-child { border-bottom: none; }
-/* --- «Кабинет» в шапке: тоже аккордеон --- */
-.hd-nav { gap: 0; }
-.hd-nav > a { min-height: 40px; width: 100%; border-bottom: 1px solid var(--line); padding: 10px 6px; font-size: 12px; }
-.hd-nav > a.me-page, .hd-nav > a.me-link { justify-content: space-between; }
-.hd-nav > a:last-of-type { border-bottom: none; }
-/* «Кабинет» на телефоне — как обычный пункт навигации (без инлайновых аккордеон-стилей) */
-.hd-dd-btn {
-display: flex;
-align-items: center;
-justify-content: space-between;
-width: 100%;
-min-height: 40px;
-padding: 10px 6px;
-font-size: 12px;
-}
 .hd-dd.open > .hd-dd-btn .caret { transform: rotate(180deg); }
-.hd-dd-menu {
-position: static;
-display: none;
-min-width: 0;
-border: none;
-border-radius: 0;
-box-shadow: none;
-border-left: 2px solid var(--accent);
-background: var(--bg-2);
-margin: 2px 0 8px 8px;
-}
-
 .hd-dd:hover > .hd-dd-menu, .hd-dd:focus-within > .hd-dd-menu { display: none !important; }
 .hd-dd.open > .hd-dd-menu { display: block !important; }
-.hd-dd-menu a { display: flex; align-items: center; padding: 10px 12px; min-height: 40px; }
 .page-title { font-size: 22px; }
 .legend { gap: 10px; padding: 8px 12px; }
 .lg { font-size: 10px; gap: 6px; }
