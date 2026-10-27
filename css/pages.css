@@ -619,7 +619,11 @@ box-shadow:
 inset 0 0 0 1px rgba(33, 31, 26, 0.28),
 0 18px 34px rgba(33, 31, 26, 0.34);
 }
-/* корешок: цвет факультета + блик и тиснёная линия */
+/* корешок: цвет СТАТУСА проверки публикации (тот же фон, что у плашки
+   статуса: st-wait / st-ok / st-fix / st-no) + блик и тиснёная линия.
+   Класс статуса навешивается на карточку в pubCard() (js/app.js).
+   --spine-color подставляется из правил статусов ниже; если по какой-то
+   причине он пуст — запасной вариант «на проверке» (--bch). */
 .card.pub-card .pub-cover .pub-spine {
 position: absolute;
 top: 0;
@@ -628,10 +632,15 @@ left: 0;
 width: 13px;
 z-index: 3;
 background: linear-gradient(90deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.18) 55%, rgba(255, 255, 255, 0.16) 100%),
-var(--stripe, var(--ink));
+var(--spine-color, var(--bch, var(--ink)));
 border-right: 1px solid rgba(255, 255, 255, 0.22);
 pointer-events: none;
 }
+/* корешок наследует цвет статуса проверки публикации */
+.card.pub-card.st-ok   { --spine-color: var(--bk); }
+.card.pub-card.st-wait { --spine-color: var(--bch); }
+.card.pub-card.st-no   { --spine-color: var(--bd); }
+.card.pub-card.st-fix  { --spine-color: var(--ba); }
 .card.pub-card .pub-cover .pub-dept {
 font: 700 9px/1.4 var(--font-m);
 letter-spacing: 0.12em;

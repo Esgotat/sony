@@ -218,7 +218,7 @@ function pubCard(p) {
     const st = STATUS[p.status] || STATUS.wait;
     const d = DEPT_BY_N[p.dept];
     return `
-<a class="card card-link pub-card" style="--stripe:${d ? FAC_COLOR[d.f] || 'var(--ink)' : 'var(--ink)'}" href="publication.html?id=${p.id}">
+<a class="card card-link pub-card ${st.cls}" href="publication.html?id=${p.id}">
 <div class="pub-book">
 <div class="pub-pages">
 <div class="pub-page-head">
