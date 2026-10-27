@@ -182,11 +182,34 @@ function licBadgeHTML(p) {
     return '<span class="lic-badge" title="' + esc(CCL[p.license].hint) + '">' + esc(p.license) + '</span>';
 }
 
+/* Обложка публикации: картинка (фото/автор работы) тянется от верха до низа
+   секции, а текст (год, статус, название, авторы, издание) лежит поверх неё
+   на затемнении. */
+function pubCoverImgHTML(p) {
+    if (p.photo) return '<img class="pub-cover-img" src="' + esc(p.photo) + '" alt="">';
+    const firstAuthor = personByShort((p.authors || '').split(',')[0].trim());
+    if (firstAuthor && firstAuthor.photo) return '<img class="pub-cover-img" src="' + esc(firstAuthor.photo) + '" alt="">';
+    const name = firstAuthor ? firstAuthor.name : (p.authors || '');
+    const r0 = firstAuthor && firstAuthor.roles ? firstAuthor.roles[0] : 'res';
+    if (window.OU_icons && OU_icons.avatarSVG) {
+        /* фон-паттерн из сгенерированного SVG-автора: он заполняет всю секцию
+           от верха до низа и повторяется по тексту */
+        var svg = OU_icons.avatarSVG(name, r0, 240);
+        var uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        return '<span class="pub-cover-gen" style="background-image:url(&quot;' + uri + '&quot;)"></span>';
+    }
+    return '';
+}
+
 function pubCard(p) {
     const st = STATUS[p.status] || STATUS.wait;
     const d = DEPT_BY_N[p.dept];
     return `
 <a class="card card-link pub-card" style="--stripe:${d ? FAC_COLOR[d.f] || 'var(--ink)' : 'var(--ink)'}" href="publication.html?id=${p.id}">
+<div class="card-emoji pub-cover">
+${pubCoverImgHTML(p)}
+<div class="pub-cover-shade"></div>
+<div class="pub-cover-text">
 <div class="card-top">
 <span class="num">${esc(p.year)}</span>
 ${licBadgeHTML(p)}
@@ -195,6 +218,8 @@ ${licBadgeHTML(p)}
 <h3 class="card-title">${esc(p.title)}</h3>
 <p class="pub-authors">${esc(p.authors)}</p>
 <p class="pub-venue">${esc(p.venue)}${d ? ' · ' + esc(d.t) : ''}</p>
+</div>
+</div>
 </a>`;
 }
 
