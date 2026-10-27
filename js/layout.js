@@ -178,13 +178,16 @@ applyTheme(pref.id, pref.color);
 window.OU_theme = { apply: applyTheme, refresh: () => { const p = themePref(); applyTheme(p.id, p.color); return p; } };
 
 /* ---------- ШАПКА ---------- */
+/* Пункт «Главная» убран из шапки — в бренд-логотип уже ведёт на index.html.
+   «Моя страница» остаётся первой; «Моя кафедра» и «Мои знакомые» перенесены
+   внутрь «Кабинета». */
 const links = [];
-if (!USER.guest) links.push({ href: 'profile.html?id=' + USER.id, label: 'Моя страница', id: 'me', extra: 'me-page' });
-links.push({ href: 'index.html', label: 'Главная', id: 'home' });
-/* «Знакомые» ведёт на личный список знакомых (mode=friends), а не на всех коллег */
-links.push({ href: USER.guest ? 'znakomye.html' : 'znakomye.html?mode=friends', label: 'Знакомые', id: 'people' });
-links.push({ href: 'moya-kafedra.html', label: 'Моя кафедра', id: 'dept' });
-const cabinetOn = ['pubs', 'req', 'chats', 'complaint'].includes(active);
+if (!USER.guest) {
+    links.push({ href: 'profile.html?id=' + USER.id, label: 'Моя страница', id: 'me', extra: 'me-page' });
+    /* «Моя кафедра» — рядом с «Моей страницей» (также дублируется в «Кабинете») */
+    if (USER.dept != null) links.push({ href: 'moya-kafedra.html', label: 'Моя кафедра', id: 'dept' });
+}
+const cabinetOn = ['pubs', 'req', 'chats', 'complaint', 'dept', 'people'].includes(active);
 const unreadComplaints = (() => {
   if (!isAdmin(USER)) return 0;
   try {
@@ -193,21 +196,26 @@ const unreadComplaints = (() => {
   } catch (e) { return 0; }
 })();
 
-/* Пункты шапки: первые шесть — «Моя страница», «Главная», «Знакомые»,
-   «Моя кафедра», «Кабинет», «Админ панель» (+«Выйти») — в один уровень,
-   остальные («Кафедры», «Публикации», «Коллеги», «Запросы») — во второй. */
+/* Пункты шапки: «Моя страница», «Кабинет», «Админ-панель» (+«Выйти») —
+   в один уровень; подменю («Кафедры», «Публикации», «Коллеги», «Запросы») —
+   во второй. «Главная» убрана (логотип ведёт на index.html), «Моя кафедра»
+   и «Мои знакомые» перенесены в «Кабинет». */
 const navMain = links.map((n) => {
     const cls = [n.extra || '', n.id === active ? 'on' : ''].filter(Boolean).join(' ');
     return `<a href="${n.href}"${cls ? ` class="${cls}"` : ''}${n.id === active ? ' aria-current="page"' : ''}>${n.label}</a>`;
 }).join('');
+const cabItems = [];
+if (!USER.guest && USER.dept != null) cabItems.push('<li><a href="moya-kafedra.html"><span class="dd-label">Моя кафедра</span></a></li>');
+cabItems.push('<li><a href="' + (USER.guest ? 'znakomye.html' : 'znakomye.html?mode=friends') + '"><span class="dd-label">Мои знакомые</span></a></li>');
+cabItems.push('<li><a href="moi-publikacii.html"><span class="dd-label">Мои публикации</span><span class="dd-badge" data-bd="pubs" hidden></span></a></li>');
+cabItems.push('<li><a href="new-request.html"><span class="dd-label">Мои запросы</span><span class="dd-badge" data-bd="reqs" hidden></span></a></li>');
+cabItems.push('<li><a href="chats.html"><span class="dd-label">Мои чаты</span><span class="dd-badge" data-bd="chats" hidden></span></a></li>');
+cabItems.push('<li><a href="complaint.html"><span class="dd-label">Написать администрации</span><span class="dd-badge" data-bd="cmp" hidden></span></a></li>');
 const navCab = !USER.guest ? `
 <div class="hd-dd">
-<button class="hd-dd-btn${cabinetOn ? ' on' : ''}" type="button" aria-haspopup="true" aria-expanded="false" id="cabBtn">Кабинет <span class="caret">▾</span><span class="hd-badge" id="cabBadge" hidden></span></button>
+<button class="hd-dd-btn${cabinetOn ? ' on' : ''}" type="button" aria-haspopup="true" aria-expanded="false" id="cabBtn">Кабинет <span class="hd-badge" id="cabBadge" hidden></span></button>
 <ul class="hd-dd-menu">
-<li><a href="moi-publikacii.html"><span class="dd-label">Мои публикации</span><span class="dd-badge" data-bd="pubs" hidden></span></a></li>
-<li><a href="new-request.html"><span class="dd-label">Мои запросы</span><span class="dd-badge" data-bd="reqs" hidden></span></a></li>
-<li><a href="chats.html"><span class="dd-label">Мои чаты</span><span class="dd-badge" data-bd="chats" hidden></span></a></li>
-<li><a href="complaint.html"><span class="dd-label">Написать администрации</span><span class="dd-badge" data-bd="cmp" hidden></span></a></li>
+${cabItems.join('\n')}
 </ul>
 </div>` : '';
 const navAdmin = isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель<span class="hd-badge" data-bd="admCmp" hidden></span></a>` : '';
@@ -268,17 +276,18 @@ const pubItems = Object.entries(STATUS).map(([key, s]) => `<li><a href="publicat
 const roleItems = Object.entries(ROLES).map(([key, r]) => `<li><a href="znakomye.html?mode=all&amp;role=${key}">${r.label}</a></li>`).join('');
 const reqItems = Object.entries(REQ_TYPES).map(([key, t]) => `<li><a href="requests.html?type=${key}">${t.label}</a></li>`).join('');
 document.getElementById('subnav').innerHTML = `
-<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Кафедры <span class="caret">▾</span></button><ul class="dd-menu">${facItems}</ul></div>
-<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Публикации <span class="caret">▾</span></button><ul class="dd-menu">${pubItems}</ul></div>
-<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Коллеги <span class="caret">▾</span></button><ul class="dd-menu">${roleItems}</ul></div>
-<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Запросы <span class="caret">▾</span></button><ul class="dd-menu">${reqItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Кафедры <span class="dd-badge" data-bd="depts" hidden></span></button><ul class="dd-menu">${facItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Публикации <span class="dd-badge" data-bd="pubs" hidden></span></button><ul class="dd-menu">${pubItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Коллеги <span class="dd-badge" data-bd="ppl" hidden></span></button><ul class="dd-menu">${roleItems}</ul></div>
+<div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Запросы <span class="dd-badge" data-bd="reqs" hidden></span></button><ul class="dd-menu">${reqItems}</ul></div>
 `;
 
 
 /* ---------- ТАЧ-АККОРДЕОНЫ (шапка + подменю) ----------
    На десктопе меню раскрываются по наведению (CSS), на телефоне — тапом.
    Тап по названию раздела («Кафедры», «Публикации», «Коллеги», «Запросы»)
-   ВСЕГДА ведёт на страницу раздела; для раскрытия списка служит шеврон ▾. */
+   и по «Кабинету» ВСЕГДА только открывает/закрывает список — без стрелок
+   и без случайных переходов. */
 const TOUCH = matchMedia('(hover: none)').matches || innerWidth <= 640;
 function initDropdown(rootSel, wrapCls, btnCls) {
     const wraps = Array.prototype.slice.call(document.querySelectorAll(rootSel + ' .' + wrapCls));
@@ -293,26 +302,17 @@ function initDropdown(rootSel, wrapCls, btnCls) {
     wraps.forEach((wrap) => {
         const btn = wrap.querySelector('.' + btnCls);
         if (!btn) return;
-        /* мобильные: клик по кнопке — переход на страницу раздела;
-           тап по шеврону ▾ — раскрыть/свернуть список */
+        /* тап по кнопке — ТОЛЬКО раскрыть/свернуть список */
         btn.addEventListener('click', (e) => {
-            e.preventDefault();
-            const onCaret = !!(e.target && e.target.closest('.caret'));
-            if (onCaret || TOUCH) {
-                if (onCaret || !btn.dataset.href) {
-                    const wasOpen = wrap.classList.contains('open');
-                    closeAll(wrap);
-                    if (!wasOpen) {
-                        wrap.classList.add('open');
-                        btn.setAttribute('aria-expanded', 'true');
-                    } else {
-                        btn.setAttribute('aria-expanded', 'false');
-                    }
-                    return;
-                }
-                closeAll(wrap);
+            e.preventDefault(); e.stopPropagation();
+            const wasOpen = wrap.classList.contains('open');
+            closeAll(wrap);
+            if (!wasOpen) {
+                wrap.classList.add('open');
+                btn.setAttribute('aria-expanded', 'true');
+            } else {
+                btn.setAttribute('aria-expanded', 'false');
             }
-            if (btn.dataset.href) location.href = btn.dataset.href;
         });
     });
     document.addEventListener('click', (e) => {
@@ -329,25 +329,19 @@ function initDropdown(rootSel, wrapCls, btnCls) {
 }
 initDropdown('#subnav', 'dd', 'dd-btn');
 initDropdown('.hd-nav', 'hd-dd', 'hd-dd-btn');
-    /* раскрываемые списки подменю: «Кафедры», «Публикации», «Коллеги», «Запросы» */
-    const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html?mode=all', 'requests.html'];
-    document.querySelectorAll('#subnav .dd').forEach((w, idx) => {
-        const b = w.querySelector('.dd-btn');
-        if (b) b.dataset.href = DD_HREFS[idx] || '';
+    /* раскрываемые списки подменю: «Кафедры», «Публикации», «Коллеги», «Запросы» —
+       бейджи счётчиков кладём на сами кнопки (стрелок ▾ больше нет) */
+    document.querySelectorAll('#subnav .dd').forEach((w) => {
         const ul = w.querySelector('.dd-menu');
         if (!ul) return;
-        const bdKey = { kafedry: 'depts', publications: 'pubs', znakomye: 'ppl', requests: 'reqs' }[DD_HREFS[idx].split('?')[0].split('.')[0]];
         ul.querySelectorAll('li > a').forEach((a) => {
             if (a.querySelector('.dd-badge')) return;
             const badge = document.createElement('span');
             badge.className = 'dd-badge';
             badge.hidden = true;
-            if (bdKey) badge.setAttribute('data-bd', bdKey);
             a.appendChild(badge);
         });
     });
-    const cabBtn = document.querySelector('.hd-dd-btn');
-    if (cabBtn) cabBtn.dataset.href = 'moi-publikacii.html';
 
 /* ---------- БЕЙДЖИ УВЕДОМЛЕНИЙ (чаты / запросы / публикации) ---------- */
 window.OU_badges = (function () {

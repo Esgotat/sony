@@ -268,10 +268,10 @@ ${deptCover}
 </div>
 </div>
 <div class="dept-stats-row card-stats">
-<span class="stat"><i class="b b-d">Д</i>${s.d}</span>
-<span class="stat"><i class="b b-k">К</i>${s.k}</span>
-<span class="stat"><i class="b b-a">А</i>${s.a}</span>
-<span class="stat"><i class="b b-ch">Ч</i>${s.ch}</span>
+<span class="stat"><i class="b b-d" style="background:#2D6A4F;color:#fff">Д</i>${s.d}</span>
+<span class="stat"><i class="b b-k" style="background:#B8860B;color:#fff">К</i>${s.k}</span>
+<span class="stat"><i class="b b-a" style="background:#457B9D;color:#fff">А</i>${s.a}</span>
+<span class="stat"><i class="b b-ch" style="background:#C41E3A;color:#fff">Ч</i>${s.ch}</span>
 </div>
 <div>
 <div class="dstat"><span>Создатель</span><i class="dots"></i><b class="txt">${creator}</b></div>
@@ -285,29 +285,27 @@ ${deptCover}
 
 function profileHTML(person, extraRight) {
 const r0 = (person.roles && person.roles[0]) || 'res';
-/* аватарка на странице пользователя — как у кафедр: широкая секция-обложка с фото/иконкой от края до края */
-let coverInner;
+/* аватарка — квадратная фотография/иконка; имя, заметка и роли-буквы
+   выводятся ПОД ней (на телефоне лишнего текста поверх фото быть не должно) */
+let avInner;
 if (person.photo) {
-    coverInner = '<img class="dept-cover-img" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">';
+    avInner = '<img class="avatar-photo avatar-square" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">';
 } else if (window.OU_icons && OU_icons.personAvatarHTML) {
-    coverInner = '<div class="dept-cover-gen">' + OU_icons.personAvatarHTML(person, 140, '') + '</div>';
+    avInner = OU_icons.personAvatarHTML(person, 140, '', true);
 } else {
-    coverInner = '<div class="dept-cover-gen"><div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div></div>';
+    avInner = '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>';
 }
 const av = `
-<div class="profile-cover dept-cover-wrap">
-${coverInner}
-<div class="dept-cover-shade"></div>
-<div class="dept-cover-text">
-<h2 class="dept-title profile-cover-name">${esc(person.name)}</h2>
-<p class="dept-desc">${esc(person.note || '')}</p>
-<div class="card-stats">
+<div class="profile-avatar-wrap">
+${avInner}
+<h2 class="profile-name">${esc(person.name)}</h2>
+${person.note ? '<p class="person-note">' + esc(person.note) + '</p>' : ''}
+<div class="card-stats profile-role-row">
 ${(person.roles || []).map((r) => ROLES[r] ? `<span class="stat"><span class="b b-${r}" style="background:${ROLES[r].color};color:#FFF">${ROLES[r].letter}</span>${esc(ROLES[r].label)}</span>` : '').join('')}
-</div>
 </div>
 </div>`;
 return `
-<div class="profile-left profile-left-cover">
+<div class="profile-left">
 ${av}
 </div>
 <div>${extraRight}</div>`;
@@ -1612,17 +1610,22 @@ function initAdmin() {
     if (!isAdmin(USER)) { document.querySelector('.content').innerHTML = '<div class="empty">Доступ только для администраторов.</div>'; return; }
     const isSystemAdmin = (u) => !!u && (u.id === 99999 || u.email === 'admin@ou.ru');
     const iAmSystem = isSystemAdmin(USER);
+    function activateAdminTab(t) {
+        document.querySelectorAll('#adminTabs .fbtn').forEach((x) => x.classList.toggle('on', x.dataset.tab === t));
+        ['users', 'depts', 'pubs', 'complaints', 'stats'].forEach((name) => { $('#tab-' + name).hidden = name !== t; });
+        if (t === 'stats' && !window._statsRendered) {
+            initAdminStats();
+            window._statsRendered = true;
+        }
+    }
     document.querySelectorAll('#adminTabs .fbtn').forEach((b) => {
-        b.addEventListener('click', () => {
-            document.querySelectorAll('#adminTabs .fbtn').forEach((x) => x.classList.remove('on'));
-            b.classList.add('on');
-            ['users', 'depts', 'pubs', 'complaints', 'stats'].forEach((t) => { $('#tab-' + t).hidden = b.dataset.tab !== t; });
-            if (b.dataset.tab === 'stats' && !window._statsRendered) {
-                initAdminStats();
-                window._statsRendered = true;
-            }
-        });
+        b.addEventListener('click', () => activateAdminTab(b.dataset.tab));
     });
+    /* ссылка вида admin.html?tab=complaints — сразу открыть нужную вкладку */
+    const tabParam = params.get('tab');
+    if (tabParam && ['users', 'depts', 'pubs', 'complaints', 'stats'].includes(tabParam)) {
+        activateAdminTab(tabParam);
+    }
     function renderUsers() {
         const list = LocalUsers.list();
         $('#tab-users').innerHTML = `<h2 class="sub-title">Пользователи · ${list.length}</h2>
