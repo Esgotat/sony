@@ -483,7 +483,7 @@ background: transparent;
 border: none;
 border-radius: 0;
 box-shadow: none;
-overflow: visible;
+overflow: hidden;
 min-height: 340px;
 }
 .card.pub-card:hover {
@@ -568,13 +568,18 @@ opacity: 0.8;
 }
 /* обложка — лежит СЛЕВА поверх страничек (перекрывая их левую часть).
    При наведении открывается (rotateY вокруг корешка), странички при этом
-   остаются неподвижными. */
+   остаются неподвижными. Ширина задаётся переменной --pub-cover-w, чтобы
+   обложка гарантированно оставалась ВНУТРИ карточки и не выходила за её
+   правый край: 100% здесь считается от ширины самой книжки (.pub-book),
+   а не от всей карточки с полями. */
 .card.pub-card .card-emoji.pub-cover {
+--pub-cover-w: calc(100% - 46px);
 position: absolute;
 top: 0;
 left: 0;
 bottom: 0;
-width: calc(100% - 46px);
+width: var(--pub-cover-w);
+max-width: 100%;
 z-index: 2;
 flex: none;
 min-width: 0;
@@ -591,6 +596,12 @@ inset 0 0 0 1px rgba(33, 31, 26, 0.28),
 0 14px 26px rgba(33, 31, 26, 0.28);
 transition: transform 0.35s ease, box-shadow 0.35s ease;
 transform-origin: left center;
+will-change: transform;
+}
+/* подстраховка: обложка никогда не выходит за границы самой карточки */
+.card.pub-card .pub-book { max-width: 100%; }
+@media (min-width: 641px) {
+.card.pub-card .card-emoji.pub-cover { --pub-cover-w: min(calc(100% - 46px), calc(100% - 20px)); }
 }
 .card.pub-card:hover .card-emoji.pub-cover {
 transform: perspective(900px) rotateY(-14deg);
@@ -693,7 +704,7 @@ text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
 /* на узких экранах обложка лежит ровно поверх страничек (те не видны, пока книга закрыта) */
 @media (max-width: 640px) {
 .pub-pages { inset: 0; }
-.card.pub-card .card-emoji.pub-cover { width: 100%; }
+.card.pub-card .card-emoji.pub-cover { --pub-cover-w: 100%; width: var(--pub-cover-w); }
 }
 /* легенда и кнопка «создать» в заголовке страницы — в одной строке, по краям */
 .page-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
