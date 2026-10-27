@@ -116,14 +116,19 @@ function initialsOf(name) {
   return ini.toUpperCase();
 }
 
-function avatarSVG(name, role, size) {
+/* square=true — квадратная аватарка (прямоугольник, без скругления), для
+   карточек коллег: занимает всю секцию картинки. Без square — круглая
+   (профили, мелкие места). */
+function avatarSVG(name, role, size, square) {
   var px = size || 24;
   var bg = ROLE_BG[role] || '#2D6A4F';
-  var fs = Math.round(px * 0.4);
-  return '<svg class="avatar-svg" viewBox="0 0 64 64" width="' + px + '" height="' + px + '" aria-hidden="true" focusable="false">' +
-    '<circle cx="32" cy="32" r="32" fill="' + bg + '"/>' +
+  var shape = square
+    ? '<rect x="0" y="0" width="64" height="64" fill="' + bg + '"/>'
+    : '<circle cx="32" cy="32" r="32" fill="' + bg + '"/>';
+  return '<svg class="avatar-svg' + (square ? ' avatar-square' : '') + '" viewBox="0 0 64 64" width="' + px + '" height="' + px + '" preserveAspectRatio="xMidYMid slice" aria-hidden="true" focusable="false">' +
+    shape +
     '<text x="32" y="32" text-anchor="middle" dominant-baseline="central" fill="#fff" ' +
-    'font-family="Inter,Arial,sans-serif" font-weight="700" font-size="' + fs + '">' + esc(initialsOf(name)) + '</text></svg>';
+    'font-family="Inter,Arial,sans-serif" font-weight="700" font-size="26">' + esc(initialsOf(name)) + '</text></svg>';
 }
 
 /* ---------- ФОТО (сжатие перед записью в хранилище) ----------
@@ -222,15 +227,16 @@ function cleanPhotoURL(u) {
 }
 
 /* Аватар человека: фото (если есть и оно валидное), иначе SVG-инициалы.
-   onError подставляет SVG-инициалы, если картинка по какой-то причине не загрузилась. */
-function personAvatarHTML(p, size, cls) {
+   onError подставляет SVG-инициалы, если картинка по какой-то причине не загрузилась.
+   square=true — аватарка без круга, на всю область секции (карточки коллег). */
+function personAvatarHTML(p, size, cls, square) {
   var url = cleanPhotoURL(p && p.photo);
   var px = size || 96;
   var role = (p && p.roles && p.roles[0]) || 'res';
   var name = (p && p.name) || '';
-  var klass = 'avatar-photo' + (cls ? ' ' + cls : '');
-  if (!url) return avatarSVG(name, role, px);
-  var fb = avatarSVG(name, role, px).replace(/"/g, '&quot;');
+  var klass = 'avatar-photo' + (square ? ' avatar-square' : '') + (cls ? ' ' + cls : '');
+  if (!url) return avatarSVG(name, role, px, square);
+  var fb = avatarSVG(name, role, px, square).replace(/"/g, '&quot;');
   return '<img class="' + klass + '" src="' + esc(url) + '" alt="Фото: ' + esc(name) + '"' +
     ' width="' + px + '" height="' + px + '"' +
     ' onerror="this.onerror=null;this.outerHTML=this.getAttribute(\'data-fb\')"' +

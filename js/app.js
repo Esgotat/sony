@@ -160,11 +160,11 @@ function personCard(p) {
     ? `<span class="stat"><span class="b b-${r}" style="background:${ROLE_BG[r] || '#2D6A4F'}">${ROLES[r].letter}</span></span>`
     : '').join('');
   const avIcon = (window.OU_icons && OU_icons.personAvatarHTML)
-    ? OU_icons.personAvatarHTML(p, 96)
+    ? OU_icons.personAvatarHTML(p, 96, '', true) /* карточки коллег: аватарка не в кружке, а на всю секцию */
     : (p.photo
-        ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
+        ? '<img class="avatar-photo avatar-square" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
         : ((window.OU_icons && OU_icons.avatarSVG)
-            ? OU_icons.avatarSVG(p.name, r0, 96)
+            ? OU_icons.avatarSVG(p.name, r0, 96, true)
             : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`));
   return `
   <a class="card card-link person-card" href="profile.html?id=${p.id}">
@@ -219,18 +219,31 @@ function pubCard(p) {
     const d = DEPT_BY_N[p.dept];
     return `
 <a class="card card-link pub-card" style="--stripe:${d ? FAC_COLOR[d.f] || 'var(--ink)' : 'var(--ink)'}" href="publication.html?id=${p.id}">
+<div class="pub-book">
+<div class="pub-pages">
+<div class="pub-page-head">
+<span class="fac">${esc(d ? d.f : '')}</span>
+<span class="num">${esc(p.year)}</span>
+</div>
+<h3 class="card-title">${esc(p.title)}</h3>
+<p class="pub-authors">${esc(p.authors)}</p>
+<div class="pub-page-foot">
+<p class="pub-venue">${esc(p.venue)}</p>
+<span class="page-no"></span>
+</div>
+</div>
 <div class="card-emoji pub-cover">
 ${pubCoverImgHTML(p)}
 <div class="pub-cover-shade"></div>
 <div class="pub-cover-text">
 <div class="card-top">
-<span class="num">${esc(p.year)}</span>
 ${licBadgeHTML(p)}
 <span class="status ${st.cls}">${esc(st.short)}</span>
 </div>
+<div class="pub-spine"></div>
 <h3 class="card-title">${esc(p.title)}</h3>
-<p class="pub-authors">${esc(p.authors)}</p>
-<p class="pub-venue">${esc(p.venue)}${d ? ' · ' + esc(d.t) : ''}</p>
+<p class="pub-dept">${d ? esc(d.t) : ''}</p>
+</div>
 </div>
 </div>
 </a>`;
