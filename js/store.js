@@ -132,6 +132,13 @@ const CloudSync = {
       ['ou_users', 'ou_departments', 'ou_people_overrides'].forEach((k) => {
         if (cloud[k] !== undefined) merged[k] = cloud[k];
       });
+      /* фото профилей — сливаем ПО ЛЮДЯМ (по _ts), а не целиком: иначе браузер,
+         который последним ушёл в облако, затрёт аватарки всех остальных коллег */
+      if (Array.isArray(cloud.ou_people_photos)) {
+        merged.ou_people_photos = mergeListByKey('ou_people_photos',
+          Array.isArray(merged.ou_people_photos) ? merged.ou_people_photos : [],
+          cloud.ou_people_photos);
+      }
       this.writeAll(applyMessageDeletes(applyUserDeletes(merged)));
       this.schedulePush();
     } catch (e) { /* офлайн */ }
@@ -241,6 +248,24 @@ const LocalDepts = {
   }
 };
 
+/* ---------- ФОТО ПРОФИЛЕЙ (ОБЩИЕ ДАННЫЕ) ----------
+   Ключевое отличие от ou_people_overrides: это отдельный синхронизируемый слой,
+   где хранятся фото ВСЕХ людей (и демо-коллег из data/people.json, и зарегистрированных).
+   В ou_users фото сохранить нельзя — туда попадают только зарегистрированные аккаунты,
+   поэтому раньше аватарки «не доезжали» до других пользователей. */
+const LocalPeoplePhotos = {
+  KEY: 'ou_people_photos',
+  list() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch (e) { return []; } },
+  byId(id) { return this.list().find((x) => x && String(x.id) === String(id)); },
+  set(id, photo) {
+    const l = this.list();
+    const i = l.findIndex((x) => x && String(x.id) === String(id));
+    if (i > -1) { l[i].photo = photo; l[i]._ts = _ts(); }
+    else { l.push({ id: Number(id) || id, photo: photo, _ts: _ts() }); }
+    try { localStorage.setItem(this.KEY, JSON.stringify(l)); } catch (e) {}
+  }
+};
+
 /* ---------- ПРАВКИ ЛЮДЕЙ ---------- */
 const LocalPeopleOvr = {
   KEY: 'ou_people_overrides',
@@ -250,14 +275,16 @@ const LocalPeopleOvr = {
     patch._ts = _ts();
     const o = this._get();
     o[id] = Object.assign(o[id] || {}, patch);
-    /* фото профиля — общие данные: пишем их и в запись пользователя (ou_users),
-       которая синхронизируется через облако, чтобы аватарку видели другие пользователи.
-       ou_people_overrides при загрузке может перетираться локальным кэшем этого браузера,
-       поэтому одного его недостаточно для показа фото ДРУГИМ людям. */
+    /* фото профиля — общие данные: держим его в трёх местах, чтобы аватарку
+       гарантированно видели другие пользователи:
+       1) ou_people_photos — отдельный общий слой (работает и для демо-коллег);
+       2) записью пользователя в ou_users (для зарегистрированных аккаунтов);
+       3) самим override'ом. */
     if ('photo' in patch) {
+      LocalPeoplePhotos.set(id, patch.photo);
       try {
         const ul = LocalUsers.list();
-        const ui = ul.findIndex((u) => u.id === Number(id));
+        const ui = ul.findIndex((u) => String(u.id) === String(id));
         if (ui > -1) {
           ul[ui].photo = patch.photo;
           ul[ui]._ts = _ts();
@@ -268,6 +295,7 @@ const LocalPeopleOvr = {
     localStorage.setItem(this.KEY, JSON.stringify(o));
   }
 };
+window.LocalPeoplePhotos = LocalPeoplePhotos;
 
 /* ---------- ЗНАКОМЫЕ ---------- */
 const LocalFriends = {
@@ -577,6 +605,15 @@ const Store = {
       const delD = LocalDepts.deleted();
       const ovrD = LocalDepts.overrides();
       const ovrPeople = LocalPeopleOvr._get();
+      /* фото профилей из общего синхронизируемого слоя (видны всем пользователям) */
+      const photoBy = {};
+      (JSON.parse(localStorage.getItem(LocalPeoplePhotos.KEY) || '[]') || []).forEach((x) => {
+        if (x && x.photo) photoBy[String(x.id)] = x;
+      });
+      const withPhoto = (p) => {
+        const ph = p.id != null ? photoBy[String(p.id)] : null;
+        return ph ? Object.assign({}, p, { photo: ph.photo }) : p;
+      };
       const delU = LocalUsers.deleted();
       const userGone = (u) => delU.some((d) => d.id === u.id || d.email === u.email);
 
@@ -592,7 +629,10 @@ const Store = {
         delete c.pass;
         return c;
       })).filter((p) => !userGone(p))
-        .map((p) => (ovrPeople[p.id] ? Object.assign({}, p, ovrPeople[p.id]) : p));
+        .map((p) => (ovrPeople[p.id] ? Object.assign({}, p, ovrPeople[p.id]) : p))
+        /* фото из общего слоя — поверх всего: его добавили сами пользователи
+           и оно синхронизируется через облако для всех коллег */
+        .map(withPhoto);
 
       this.pubs = pubs
         .filter((p) => !delP.includes(p.id))

@@ -205,12 +205,46 @@ function readImage(file, maxSide, cb, aspect) {
   reader.readAsDataURL(file);
 }
 
+/* ---------- ФОТО ПРОФИЛЯ: ОЧИСТКА СТРОКИ ОТ НЕВИДИМЫХ СИМВОЛОВ ----------
+   dataURL с фото вставляется в HTML через esc(), который кавычки превращает в &quot;.
+   Если base64-строка повреждена (лишние пробелы/переносы) или содержит символы,
+   ломающие разметку, браузер не может загрузить картинку — аватарка «исчезает»
+   у других пользователей. Функция вычищает всё лишнее и отбрасывает явный мусор. */
+function cleanPhotoURL(u) {
+  if (!u || typeof u !== 'string') return '';
+  var s = u.trim().replace(/[\s\r\n\t]+/g, '');
+  if (s.indexOf('data:image/') === 0) {
+    var m = /^data:image\/(png|jpe?g|webp|gif);base64,([A-Za-z0-9+/=_-]+)$/.exec(s);
+    return m ? ('data:image/' + m[1].replace('jpeg', 'jpg') + ';base64,' + m[2]) : '';
+  }
+  if (/^(https?:)?\/\//i.test(s)) return s;
+  return '';
+}
+
+/* Аватар человека: фото (если есть и оно валидное), иначе SVG-инициалы.
+   onError подставляет SVG-инициалы, если картинка по какой-то причине не загрузилась. */
+function personAvatarHTML(p, size, cls) {
+  var url = cleanPhotoURL(p && p.photo);
+  var px = size || 96;
+  var role = (p && p.roles && p.roles[0]) || 'res';
+  var name = (p && p.name) || '';
+  var klass = 'avatar-photo' + (cls ? ' ' + cls : '');
+  if (!url) return avatarSVG(name, role, px);
+  var fb = avatarSVG(name, role, px).replace(/"/g, '&quot;');
+  return '<img class="' + klass + '" src="' + esc(url) + '" alt="Фото: ' + esc(name) + '"' +
+    ' width="' + px + '" height="' + px + '"' +
+    ' onerror="this.onerror=null;this.outerHTML=this.getAttribute(\'data-fb\')"' +
+    ' data-fb="' + fb + '">';
+}
+
 window.OU_icons = {
   icon: icon,
   deptIconHTML: deptIconHTML,
   iconSelectHTML: iconSelectHTML,
   normalizeDept: normalizeDept,
   avatarSVG: avatarSVG,
+  personAvatarHTML: personAvatarHTML,
+  cleanPhotoURL: cleanPhotoURL,
   readImage: readImage,
   initialsOf: initialsOf,
   names: Object.keys(P),

@@ -75,7 +75,18 @@ const sortPubs = (list) => list.slice().sort((a, b) => b.year - a.year || a.id -
 const pubsOf = (person) => person.short
     ? sortPubs((Store.pubs || []).filter((p) => p.authors.includes(person.short)))
     : [];
-const effectiveUser = () => Object.assign({}, USER, LocalProfile.get(), LocalPeopleOvr.get(USER.id));
+const effectiveUser = () => {
+  const base = Object.assign({}, USER, LocalProfile.get(), LocalPeopleOvr.get(USER.id));
+  /* фото из общего синхронизируемого слоя — приоритетнее локальных копий:
+     так аватарку человека видят все пользователи (включая его собственную страницу) */
+  try {
+    if (window.LocalPeoplePhotos) {
+      const ph = LocalPeoplePhotos.byId(base.id);
+      if (ph && ph.photo) base.photo = ph.photo;
+    }
+  } catch (e) {}
+  return base;
+};
 const personById = (id) => (id === USER.id ? effectiveUser() : (Store.people || []).find((x) => x.id === id));
 const personByShort = (short) => {
     if (!short) return null;
@@ -148,11 +159,13 @@ function personCard(p) {
   const roles = (p.roles || []).map((r) => ROLES[r]
     ? `<span class="stat"><span class="b b-${r}" style="background:${ROLE_BG[r] || '#2D6A4F'}">${ROLES[r].letter}</span></span>`
     : '').join('');
-  const avIcon = p.photo
-    ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
-    : ((window.OU_icons && OU_icons.avatarSVG)
-        ? OU_icons.avatarSVG(p.name, r0, 96)
-        : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`);
+  const avIcon = (window.OU_icons && OU_icons.personAvatarHTML)
+    ? OU_icons.personAvatarHTML(p, 96)
+    : (p.photo
+        ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
+        : ((window.OU_icons && OU_icons.avatarSVG)
+            ? OU_icons.avatarSVG(p.name, r0, 96)
+            : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`));
   return `
   <a class="card card-link person-card" href="profile.html?id=${p.id}">
     <div class="card-emoji" aria-hidden="true">
@@ -259,11 +272,13 @@ ${deptCover}
 
 function profileHTML(person, extraRight) {
 const r0 = (person.roles && person.roles[0]) || 'res';
-const av = person.photo
+const av = (window.OU_icons && OU_icons.personAvatarHTML)
+    ? '<div class="avatar avatar-big">' + OU_icons.personAvatarHTML(person, 80, 'avatar-big') + '</div>'
+    : (person.photo
     ? '<img class="avatar avatar-big avatar-photo" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">'
     : ((window.OU_icons && OU_icons.avatarSVG)
     ? '<div class="avatar avatar-big svg">' + OU_icons.avatarSVG(person.name, r0, 80) + '</div>'
-    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>');
+    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>'));
 return `
 <div class="profile-left">
 ${av}
@@ -665,7 +680,8 @@ function initProfile() {
             btn.disabled = true; btn.textContent = 'Обработка…';
             const done = (dataUrl) => {
                 LocalProfile.save({ photo: dataUrl });
-                /* сохраняем фото и в общий профиль пользователя, чтобы его видели другие */
+                /* сохраняем фото в общий слой (ou_people_photos) и overrides —
+                   оба синхронизируются через облако, поэтому аватарку увидят все коллеги */
                 LocalPeopleOvr.update(person.id, { photo: dataUrl });
                 person.photo = dataUrl;
                 if (LocalUsers.byId(person.id)) LocalUsers.update(person.id, { photo: dataUrl });
@@ -673,7 +689,7 @@ function initProfile() {
                 render();
             };
             if (window.OU_icons && OU_icons.readImage) {
-                OU_icons.readImage(f, 256, (err, dataUrl) => {
+                OU_icons.readImage(f, 512, (err, dataUrl) => {
                     if (err) { alert('Не удалось прочитать изображение.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
                     try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
                     catch (err2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
