@@ -219,9 +219,12 @@ ${cabItems.join('\n')}
 </ul>
 </div>` : '';
 const navAdmin = isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель<span class="hd-badge" data-bd="admCmp" hidden></span></a>` : '';
+/* «Выйти» на телефоне показываем внизу страницы профиля (см. app.js),
+   в шапке оставляем только «Войти» для гостей */
+const isMobileNav = matchMedia('(hover: none)').matches || innerWidth <= 640;
 const navAuth = USER.guest
     ? '<a href="login.html" class="me-link">Войти</a>'
-    : '<a href="#" class="me-link" id="logoutBtn">Выйти</a>';
+    : (isMobileNav && document.body.dataset.page === 'person' ? '' : '<a href="#" class="me-link" id="logoutBtn">Выйти</a>');
 
 document.getElementById('hd').innerHTML = `
 <a class="brand" href="index.html"><span class="brand-line1">Open</span><span class="brand-line2">University</span></a>
@@ -283,13 +286,14 @@ document.getElementById('subnav').innerHTML = `
 `;
 
 
-/* ---------- ТАЧ-АККОРДЕОНЫ (шапка + подменю) ----------
-   На десктопе меню раскрываются по наведению (CSS), на телефоне — тапом.
-   Тап по названию раздела («Кафедры», «Публикации», «Коллеги», «Запросы»)
-   и по «Кабинету» ВСЕГДА только открывает/закрывает список — без стрелок
-   и без случайных переходов. */
-const TOUCH = matchMedia('(hover: none)').matches || innerWidth <= 640;
-function initDropdown(rootSel, wrapCls, btnCls) {
+/* ---------- АККОРДЕОНЫ (шапка + подменю) ----------
+   Десктоп: наведение раскрывает список (CSS), клик по названию раздела
+   ведёт на страницу раздела. Телефон: первый тап раскрывает список,
+   повторный тап по той же кнопке ведёт на страницу раздела.
+   Определяем тач-режим в момент инициализации обработчиков (не при загрузке). */
+function isTouchNav() { return matchMedia('(hover: none)').matches || innerWidth <= 640; }
+const SECTION_PAGES = { 'Кафедры': 'kafedry.html', 'Публикации': 'publications.html', 'Коллеги': 'znakomye.html?mode=all', 'Запросы': 'requests.html' };
+function initDropdown(rootSel, wrapCls, btnCls, hrefs) {
     const wraps = Array.prototype.slice.call(document.querySelectorAll(rootSel + ' .' + wrapCls));
     function closeAll(except) {
         wraps.forEach((w) => {
@@ -299,17 +303,24 @@ function initDropdown(rootSel, wrapCls, btnCls) {
             if (b) b.setAttribute('aria-expanded', 'false');
         });
     }
-    wraps.forEach((wrap) => {
+    wraps.forEach((wrap, i) => {
         const btn = wrap.querySelector('.' + btnCls);
         if (!btn) return;
-        /* тап по кнопке — ТОЛЬКО раскрыть/свернуть список */
+        const href = hrefs && hrefs[i];
         btn.addEventListener('click', (e) => {
             e.preventDefault(); e.stopPropagation();
+            /* desktop: клик по названию раздела всегда ведёт на страницу,
+               список раскрывается наведением (CSS) */
+            if (href && !isTouchNav()) { location.href = href; return; }
+            /* телефон: первый тап — раскрыть список, повторный тап по
+               уже раскрытой кнопке — перейти на страницу раздела */
             const wasOpen = wrap.classList.contains('open');
             closeAll(wrap);
             if (!wasOpen) {
                 wrap.classList.add('open');
                 btn.setAttribute('aria-expanded', 'true');
+            } else if (href) {
+                location.href = href;
             } else {
                 btn.setAttribute('aria-expanded', 'false');
             }
@@ -327,8 +338,9 @@ function initDropdown(rootSel, wrapCls, btnCls) {
         });
     });
 }
-initDropdown('#subnav', 'dd', 'dd-btn');
-initDropdown('.hd-nav', 'hd-dd', 'hd-dd-btn');
+const subHrefs = ['kafedry.html', 'publications.html', 'znakomye.html?mode=all', 'requests.html'];
+initDropdown('#subnav', 'dd', 'dd-btn', subHrefs);
+initDropdown('.hd-nav', 'hd-dd', 'hd-dd-btn', null);
     /* раскрываемые списки подменю: «Кафедры», «Публикации», «Коллеги», «Запросы» —
        бейджи счётчиков кладём на сами кнопки (стрелок ▾ больше нет) */
     document.querySelectorAll('#subnav .dd').forEach((w) => {

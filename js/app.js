@@ -810,9 +810,15 @@ function initProfile() {
                 : '';
             emptyPeople.hidden = people.length !== 0;
             $('#qlinks').innerHTML = `
-<a class="qlink" href="moya-kafedra.html?dept=${USER.dept != null ? USER.dept : ''}">Моя кафедра <span class="arrow">→</span></a>
 <a class="qlink" href="moi-publikacii.html">Все публикации <span class="arrow">→</span></a>
-<a class="qlink" href="znakomye.html?mode=friends">Знакомые <span class="arrow">→</span></a>`;
+<a class="qlink" href="znakomye.html?mode=friends">Мои знакомые <span class="arrow">→</span></a>`;
+        /* на телефоне кнопка «Выйти» — в самый низ страницы профиля */
+        if (matchMedia('(hover: none)').matches || innerWidth <= 640) {
+            $('#qlinks').insertAdjacentHTML('afterend',
+                '<div class="member-bar logout-bar"><a class="edit-btn danger-btn" href="#" id="logoutBtnBottom">Выйти из профиля</a></div>');
+            const lb = document.getElementById('logoutBtnBottom');
+            if (lb) lb.addEventListener('click', (e) => { e.preventDefault(); Session.clear(); location.href = 'index.html'; });
+        }
         }
     }
 

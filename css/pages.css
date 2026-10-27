@@ -386,23 +386,8 @@ letter-spacing: 0.05em;
 text-transform: uppercase;
 color: rgba(255, 255, 255, 0.92);
 }
-/* буквы Д/К/А/Ч — фон нужного (фирменного) цвета, слегка прозрачный; сами буквы полностью прозрачные */
-.dept-cover-wrap .b {
-width: 24px;
-height: 24px;
-font-size: 11px;
-border-radius: 3px;
-border: none;
-font-weight: 800;
-display: inline-grid;
-place-items: center;
-color: transparent;
-}
-/* прозрачная буква поверх затемнения — фон просвечивает тёмным (буква видна как "вырезанная") */
-.dept-cover-wrap .b.b-d  { background: rgba(45, 106, 79, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
-.dept-cover-wrap .b.b-k  { background: rgba(184, 134, 11, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
-.dept-cover-wrap .b.b-a  { background: rgba(69, 123, 157, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
-.dept-cover-wrap .b.b-ch { background: rgba(196, 30, 58, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
+/* Д/К/А/Ч больше не выводятся поверх обложки кафедры — компактный ряд
+   с яркими залитыми буквами стоит ПОД обложкой (.dept-stats-row). */
 /* Д/К/А/Ч — вынесены из обложки в компактный ряд под ней (яркие залитые цвета, белая буква) */
 .dept-stats-row.card-stats {
 display: flex;
@@ -977,7 +962,9 @@ padding: 18px 22px;
 .auth-form a { color: var(--accent); text-decoration: none; border-bottom: 1px solid var(--accent); }
 
 /* ---------- АДМИН ---------- */
-.admin-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--ink); }
+.admin-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--ink); overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+.admin-tabs::-webkit-scrollbar { display: none; }
+.admin-tabs .fbtn { white-space: nowrap; flex: 0 0 auto; }
 .admin-tabs .fbtn {
 border: none;
 border-bottom: 2px solid transparent;

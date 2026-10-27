@@ -1,0 +1,3 @@
+PHONE: {"phone":{"guest":false,"logoutTop":false,"logoutBottom":true,"bottomIsLast":true},"afterLogout":{"url":"http://localhost:8099/index.html","session":null}}
+DESKTOP: {"logoutTop":false,"logoutBottom":true}
+DESKTOP SUBNAV: {"hov":"block","navUrl":"http://localhost:8099/profile.html?id=556"}
