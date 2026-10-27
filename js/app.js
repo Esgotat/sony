@@ -219,18 +219,31 @@ function pubCard(p) {
     const d = DEPT_BY_N[p.dept];
     return `
 <a class="card card-link pub-card" style="--stripe:${d ? FAC_COLOR[d.f] || 'var(--ink)' : 'var(--ink)'}" href="publication.html?id=${p.id}">
+<div class="pub-book">
+<div class="pub-pages">
+<div class="pub-page-head">
+<span class="fac">${esc(d ? d.f : '')}</span>
+<span class="num">${esc(p.year)}</span>
+</div>
+<h3 class="card-title">${esc(p.title)}</h3>
+<p class="pub-authors">${esc(p.authors)}</p>
+<div class="pub-page-foot">
+<p class="pub-venue">${esc(p.venue)}</p>
+<span class="page-no"></span>
+</div>
+</div>
 <div class="card-emoji pub-cover">
 ${pubCoverImgHTML(p)}
 <div class="pub-cover-shade"></div>
 <div class="pub-cover-text">
 <div class="card-top">
-<span class="num">${esc(p.year)}</span>
 ${licBadgeHTML(p)}
 <span class="status ${st.cls}">${esc(st.short)}</span>
 </div>
+<div class="pub-spine"></div>
 <h3 class="card-title">${esc(p.title)}</h3>
-<p class="pub-authors">${esc(p.authors)}</p>
-<p class="pub-venue">${esc(p.venue)}${d ? ' · ' + esc(d.t) : ''}</p>
+<p class="pub-dept">${d ? esc(d.t) : ''}</p>
+</div>
 </div>
 </div>
 </a>`;
