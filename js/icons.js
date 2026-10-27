@@ -126,8 +126,45 @@ function avatarSVG(name, role, size) {
     'font-family="Inter,Arial,sans-serif" font-weight="700" font-size="' + fs + '">' + esc(initialsOf(name)) + '</text></svg>';
 }
 
-/* ---------- ФОТО (сжатие перед записью в хранилище) ---------- */
-function readImage(file, maxSide, cb) {
+/* ---------- ФОТО (сжатие перед записью в хранилище) ----------
+   Кадрирование по центру + последовательное уменьшение (step-down resampling)
+   вместо одного drawImage — так изображение не «мылится» при сильном уменьшении.
+*/
+function coverCrop(img, W, H) {
+  var sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+  var s = Math.max(W / sw, H / sh);           // side cover: заполняем весь холст
+  var cw = Math.round(sw * s), ch = Math.round(sh * s);
+  var cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  /* уменьшаем поэтапно (каждый шаг <=50%), чтобы сохранить резкость */
+  var tw = cw, th = ch;
+  if (cw > W * 2 || ch > H * 2) {
+    var t = document.createElement('canvas');
+    t.width = cw; t.height = ch;
+    var tc = t.getContext('2d');
+    tc.drawImage(img, 0, 0, cw, ch);
+    while (tw > W * 2 && th > H * 2) {
+      var nw = Math.max(W, Math.round(tw / 2)), nh = Math.max(H, Math.round(th / 2));
+      var n = document.createElement('canvas');
+      n.width = nw; n.height = nh;
+      var nc = n.getContext('2d');
+      nc.imageSmoothingEnabled = true;
+      nc.imageSmoothingQuality = 'high';
+      nc.drawImage(t, 0, 0, tw, th, 0, 0, nw, nh);
+      t = n; tw = nw; th = nh;
+    }
+    ctx.drawImage(t, Math.round((cw - tw) / 2), Math.round((ch - th) / 2), tw, th,
+      Math.round((W - cw) / 2), Math.round((H - ch) / 2), cw, ch);
+  } else {
+    ctx.drawImage(img, (W - cw) / 2, (H - ch) / 2, cw, ch);
+  }
+  return cv;
+}
+
+function readImage(file, maxSide, cb, aspect) {
   if (!file || !/^image\//.test(file.type)) { cb(new Error('not an image')); return; }
   var reader = new FileReader();
   reader.onerror = function () { cb(reader.error || new Error('read error')); };
@@ -136,13 +173,31 @@ function readImage(file, maxSide, cb) {
     img.onerror = function () { cb(new Error('bad image')); };
     img.onload = function () {
       try {
-        var side = Math.min(maxSide || 320, Math.max(img.width, img.height));
-        var k = side / Math.max(img.width, img.height);
-        var w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
-        var cv = document.createElement('canvas');
-        cv.width = w; cv.height = h;
-        cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        cb(null, cv.toDataURL('image/jpeg', 0.82));
+        var side = Math.min(maxSide || 1200, Math.max(img.width, img.height));
+        var out, url;
+        if (aspect) {
+          /* обложка: кадрируем по центру под нужное соотношение сторон */
+          var W = side, H = Math.max(1, Math.round(side / aspect));
+          if (W < 480) W = Math.min(480, img.width);
+          if (H < Math.round(W / aspect)) H = Math.round(W / aspect);
+          out = coverCrop(img, W, H);
+        } else {
+          var k = side / Math.max(img.width, img.height);
+          var w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+          out = document.createElement('canvas');
+          out.width = w; out.height = h;
+          var octx = out.getContext('2d');
+          octx.imageSmoothingEnabled = true;
+          octx.imageSmoothingQuality = 'high';
+          octx.drawImage(img, 0, 0, w, h);
+        }
+        url = out.toDataURL('image/jpeg', 0.9);
+        /* если JPEG с прозрачностью дал чёрный фон на PNG — пробуем PNG */
+        if (/^image\/png/.test(file.type) && file.size < 700 * 1024) {
+          var png = out.toDataURL('image/png');
+          if (png.length < url.length * 1.6) url = png;
+        }
+        cb(null, url);
       } catch (e) { cb(e); }
     };
     img.src = reader.result;

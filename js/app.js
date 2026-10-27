@@ -917,7 +917,8 @@ function initDeptPage() {
             const pf = phEl && phEl.files[0];
             if (pf) {
                 if (!/^image\//.test(pf.type)) { alert('Нужен файл изображения.'); return; }
-                OU_icons.readImage(pf, 320, (err, dataUrl) => {
+                /* обложка кафедры: кадрирование под соотношение секции (~16/7), высокое разрешение */
+                OU_icons.readImage(pf, 1400, (err, dataUrl) => {
                     if (err) { alert('Не удалось прочитать изображение.'); return; }
                     try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
                     catch (e2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); return; }
@@ -1624,7 +1625,7 @@ ${all.map((d) => `<tr><td>${d.n}</td><td>${esc(d.t)}</td><td>${d.createdBy != nu
             const pf = pfEl && pfEl.files[0];
             const finish = () => { LocalDepts.add(rec); renderDepts(); };
             if (pf && window.OU_icons) {
-                OU_icons.readImage(pf, 320, (err, dataUrl) => { if (!err) rec.photo = dataUrl; finish(); });
+                OU_icons.readImage(pf, 1400, (err, dataUrl) => { if (!err) rec.photo = dataUrl; finish(); }, 16 / 7);
             } else finish();
         });
         $('#tab-depts').querySelectorAll('button[data-del-d]').forEach((btn) => {
