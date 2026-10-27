@@ -232,6 +232,41 @@ color: var(--ink);
 .dept-emoji .dept-ic .ou-ic { width: 44px; height: 44px; }
 .avatar-svg { display: block; border-radius: 50%; }
 .card.person-card .card-emoji .avatar-svg { width: 96px; height: 96px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
+/* фото на карточке человека — прямоугольное, заполняет всю область картинки */
+.card.person-card .card-emoji .avatar-photo {
+width: 100%;
+height: 100%;
+border-radius: 0;
+object-fit: cover;
+object-position: center top;
+}
+/* загруженное фото кафедры — никогда не больше контейнера, не залазит на текст */
+.dept-photo {
+max-width: 100%;
+max-height: 100%;
+width: auto;
+height: auto;
+display: block;
+object-fit: contain;
+}
+.dept-emoji .dept-photo {
+width: 100%;
+height: auto;
+max-height: 100%;
+aspect-ratio: 1 / 1;
+object-fit: cover;
+border-radius: 6px;
+}
+/* на карточке кафедры фото занимает всё выделенное место (без овала) */
+.card .card-emoji .dept-photo.avatar-svg {
+width: 100%;
+height: 100%;
+border-radius: 0;
+object-fit: cover;
+object-position: center;
+}
+/* фото профиля — без овального скругления */
+img.avatar-photo { border-radius: 4px; object-fit: cover; }
 .dept-title {
 font: 700 22px/1.2 var(--font-h);
 margin: 8px 0 10px;

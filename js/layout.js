@@ -189,7 +189,7 @@ if (colorInput) {
 /* ---------- ПОДМЕНЮ ---------- */
 const facItems = FAC.map((f) => `<li><a href="kafedry.html?fac=${encodeURIComponent(f)}">${f.replace(' науки', '')}</a></li>`).join('');
 const pubItems = Object.entries(STATUS).map(([key, s]) => `<li><a href="publications.html?status=${key}">${s.label}</a></li>`).join('');
-const roleItems = Object.entries(ROLES).map(([key, r]) => `<li><a href="znakomye.html?role=${key}">${r.label}</a></li>`).join('');
+const roleItems = Object.entries(ROLES).map(([key, r]) => `<li><a href="znakomye.html?mode=all&amp;role=${key}">${r.label}</a></li>`).join('');
 const reqItems = Object.entries(REQ_TYPES).map(([key, t]) => `<li><a href="requests.html?type=${key}">${t.label}</a></li>`).join('');
 document.getElementById('subnav').innerHTML = `
 <div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Кафедры <span class="caret">▾</span></button><ul class="dd-menu">${facItems}</ul></div>
@@ -254,13 +254,13 @@ function initDropdown(rootSel, wrapCls, btnCls) {
 initDropdown('#subnav', 'dd', 'dd-btn');
 initDropdown('.hd-nav', 'hd-dd', 'hd-dd-btn');
     /* раскрываемые списки подменю: «Кафедры», «Публикации», «Коллеги», «Запросы» */
-    const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html', 'requests.html'];
+    const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html?mode=all', 'requests.html'];
     document.querySelectorAll('#subnav .dd').forEach((w, idx) => {
         const b = w.querySelector('.dd-btn');
         if (b) b.dataset.href = DD_HREFS[idx] || '';
         const ul = w.querySelector('.dd-menu');
         if (!ul) return;
-        const bdKey = { kafedry: 'depts', publications: 'pubs', znakomye: 'ppl', requests: 'reqs' }[DD_HREFS[idx].split('.')[0]];
+        const bdKey = { kafedry: 'depts', publications: 'pubs', znakomye: 'ppl', requests: 'reqs' }[DD_HREFS[idx].split('?')[0].split('.')[0]];
         ul.querySelectorAll('li > a').forEach((a) => {
             if (a.querySelector('.dd-badge')) return;
             const badge = document.createElement('span');

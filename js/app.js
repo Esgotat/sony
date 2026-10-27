@@ -529,14 +529,16 @@ function deptCardHTML(c) {
 // ============================================================
 function initPeople() {
     const pre = params.get('role');
-    /* страница «Знакомые» всегда показывает только список знакомых; галочки переключения нет.
-       Коллег по роли можно посмотреть со ссылками вида znakomye.html?role=res */
-    const isFriendsMode = location.pathname.indexOf('znakomye') !== -1 &&
-        (params.get('mode') === 'friends' || !params.get('role'));
+    /* «Знакомые» (mode=friends) — личный список знакомых;
+       «Коллеги» (mode=all или переход из подменю «Коллеги», в т.ч. с ?role=) — все пользователи */
+    const isFriendsMode = params.get('mode') === 'friends';
     const state = {
         role: ['rev', 'res', 'sup', 'trn', 'adm'].includes(pre) ? pre : 'Все',
-        friendsOnly: isFriendsMode && !USER.guest
+        friendsOnly: !USER.guest && isFriendsMode
     };
+    /* подписываем заголовок страницы под выбранным режимом */
+    const titleEl = document.querySelector('.page-title');
+    if (titleEl) titleEl.textContent = state.friendsOnly ? 'Знакомые' : 'Коллеги';
 
     if (!USER.guest && !$('#addFriendBar')) {
         $('.filters-row').insertAdjacentHTML('afterend',
