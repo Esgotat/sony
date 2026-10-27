@@ -126,8 +126,45 @@ function avatarSVG(name, role, size) {
     'font-family="Inter,Arial,sans-serif" font-weight="700" font-size="' + fs + '">' + esc(initialsOf(name)) + '</text></svg>';
 }
 
-/* ---------- ФОТО (сжатие перед записью в хранилище) ---------- */
-function readImage(file, maxSide, cb) {
+/* ---------- ФОТО (сжатие перед записью в хранилище) ----------
+   Кадрирование по центру + последовательное уменьшение (step-down resampling)
+   вместо одного drawImage — так изображение не «мылится» при сильном уменьшении.
+*/
+function coverCrop(img, W, H) {
+  var sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+  var s = Math.max(W / sw, H / sh);           // side cover: заполняем весь холст
+  var cw = Math.round(sw * s), ch = Math.round(sh * s);
+  var cv = document.createElement('canvas');
+  cv.width = W; cv.height = H;
+  var ctx = cv.getContext('2d');
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = 'high';
+  /* уменьшаем поэтапно (каждый шаг <=50%), чтобы сохранить резкость */
+  var tw = cw, th = ch;
+  if (cw > W * 2 || ch > H * 2) {
+    var t = document.createElement('canvas');
+    t.width = cw; t.height = ch;
+    var tc = t.getContext('2d');
+    tc.drawImage(img, 0, 0, cw, ch);
+    while (tw > W * 2 && th > H * 2) {
+      var nw = Math.max(W, Math.round(tw / 2)), nh = Math.max(H, Math.round(th / 2));
+      var n = document.createElement('canvas');
+      n.width = nw; n.height = nh;
+      var nc = n.getContext('2d');
+      nc.imageSmoothingEnabled = true;
+      nc.imageSmoothingQuality = 'high';
+      nc.drawImage(t, 0, 0, tw, th, 0, 0, nw, nh);
+      t = n; tw = nw; th = nh;
+    }
+    ctx.drawImage(t, Math.round((cw - tw) / 2), Math.round((ch - th) / 2), tw, th,
+      Math.round((W - cw) / 2), Math.round((H - ch) / 2), cw, ch);
+  } else {
+    ctx.drawImage(img, (W - cw) / 2, (H - ch) / 2, cw, ch);
+  }
+  return cv;
+}
+
+function readImage(file, maxSide, cb, aspect) {
   if (!file || !/^image\//.test(file.type)) { cb(new Error('not an image')); return; }
   var reader = new FileReader();
   reader.onerror = function () { cb(reader.error || new Error('read error')); };
@@ -136,18 +173,68 @@ function readImage(file, maxSide, cb) {
     img.onerror = function () { cb(new Error('bad image')); };
     img.onload = function () {
       try {
-        var side = Math.min(maxSide || 320, Math.max(img.width, img.height));
-        var k = side / Math.max(img.width, img.height);
-        var w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
-        var cv = document.createElement('canvas');
-        cv.width = w; cv.height = h;
-        cv.getContext('2d').drawImage(img, 0, 0, w, h);
-        cb(null, cv.toDataURL('image/jpeg', 0.82));
+        var side = Math.min(maxSide || 1200, Math.max(img.width, img.height));
+        var out, url;
+        if (aspect) {
+          /* обложка: кадрируем по центру под нужное соотношение сторон */
+          var W = side, H = Math.max(1, Math.round(side / aspect));
+          if (W < 480) W = Math.min(480, img.width);
+          if (H < Math.round(W / aspect)) H = Math.round(W / aspect);
+          out = coverCrop(img, W, H);
+        } else {
+          var k = side / Math.max(img.width, img.height);
+          var w = Math.max(1, Math.round(img.width * k)), h = Math.max(1, Math.round(img.height * k));
+          out = document.createElement('canvas');
+          out.width = w; out.height = h;
+          var octx = out.getContext('2d');
+          octx.imageSmoothingEnabled = true;
+          octx.imageSmoothingQuality = 'high';
+          octx.drawImage(img, 0, 0, w, h);
+        }
+        url = out.toDataURL('image/jpeg', 0.9);
+        /* если JPEG с прозрачностью дал чёрный фон на PNG — пробуем PNG */
+        if (/^image\/png/.test(file.type) && file.size < 700 * 1024) {
+          var png = out.toDataURL('image/png');
+          if (png.length < url.length * 1.6) url = png;
+        }
+        cb(null, url);
       } catch (e) { cb(e); }
     };
     img.src = reader.result;
   };
   reader.readAsDataURL(file);
+}
+
+/* ---------- ФОТО ПРОФИЛЯ: ОЧИСТКА СТРОКИ ОТ НЕВИДИМЫХ СИМВОЛОВ ----------
+   dataURL с фото вставляется в HTML через esc(), который кавычки превращает в &quot;.
+   Если base64-строка повреждена (лишние пробелы/переносы) или содержит символы,
+   ломающие разметку, браузер не может загрузить картинку — аватарка «исчезает»
+   у других пользователей. Функция вычищает всё лишнее и отбрасывает явный мусор. */
+function cleanPhotoURL(u) {
+  if (!u || typeof u !== 'string') return '';
+  var s = u.trim().replace(/[\s\r\n\t]+/g, '');
+  if (s.indexOf('data:image/') === 0) {
+    var m = /^data:image\/(png|jpe?g|webp|gif);base64,([A-Za-z0-9+/=_-]+)$/.exec(s);
+    return m ? ('data:image/' + m[1].replace('jpeg', 'jpg') + ';base64,' + m[2]) : '';
+  }
+  if (/^(https?:)?\/\//i.test(s)) return s;
+  return '';
+}
+
+/* Аватар человека: фото (если есть и оно валидное), иначе SVG-инициалы.
+   onError подставляет SVG-инициалы, если картинка по какой-то причине не загрузилась. */
+function personAvatarHTML(p, size, cls) {
+  var url = cleanPhotoURL(p && p.photo);
+  var px = size || 96;
+  var role = (p && p.roles && p.roles[0]) || 'res';
+  var name = (p && p.name) || '';
+  var klass = 'avatar-photo' + (cls ? ' ' + cls : '');
+  if (!url) return avatarSVG(name, role, px);
+  var fb = avatarSVG(name, role, px).replace(/"/g, '&quot;');
+  return '<img class="' + klass + '" src="' + esc(url) + '" alt="Фото: ' + esc(name) + '"' +
+    ' width="' + px + '" height="' + px + '"' +
+    ' onerror="this.onerror=null;this.outerHTML=this.getAttribute(\'data-fb\')"' +
+    ' data-fb="' + fb + '">';
 }
 
 window.OU_icons = {
@@ -156,6 +243,8 @@ window.OU_icons = {
   iconSelectHTML: iconSelectHTML,
   normalizeDept: normalizeDept,
   avatarSVG: avatarSVG,
+  personAvatarHTML: personAvatarHTML,
+  cleanPhotoURL: cleanPhotoURL,
   readImage: readImage,
   initialsOf: initialsOf,
   names: Object.keys(P),

@@ -72,6 +72,21 @@ function buildPalette(hex) {
 }
 
 const CUSTOM_VARS = ['--bg','--bg-2','--ink','--muted','--line','--line-2','--dark','--paper','--accent','--bd','--bk','--ba','--bch'];
+/* Палитры встроенных тем. Каждой теме соответствует полный набор переменных,
+   поэтому переключение любой темы работает даже без загруженного CSS-правила. */
+const THEME_PALETTES = {
+    dark:      { '--bg':'#111111','--bg-2':'#1A1A1A','--ink':'#E8E6E1','--muted':'#888888','--line':'#333333','--line-2':'#444444','--dark':'#E8E6E1','--paper':'#111111','--accent':'#E63946','--bd':'#E63946','--bk':'#52B788','--ba':'#457B9D','--bch':'#E9C46A','--adm':'#9B5DE5' },
+    night:     { '--bg':'#141210','--bg-2':'#1E1B17','--ink':'#EAE3D6','--muted':'#948B7C','--line':'#3A342C','--line-2':'#57503F','--dark':'#EAE3D6','--paper':'#181512','--accent':'#D9A441','--bd':'#D9A441','--bk':'#7FA88B','--ba':'#8CA3C6','--bch':'#C0895A','--adm':'#B08BC6' },
+    tiffany:   { '--bg':'#E4F4F3','--bg-2':'#F1FAF9','--ink':'#123B3C','--muted':'#5E8A89','--line':'#BCE0DE','--line-2':'#8CC5C3','--dark':'#0F5657','--paper':'#F5FCFB','--accent':'#2E8F90','--bd':'#2E8F90','--bk':'#4AA87C','--ba':'#4A7FA8','--bch':'#A8894A','--adm':'#8A4AA8' },
+    greenery:  { '--bg':'#EEF3E1','--bg-2':'#F6F9EE','--ink':'#25301A','--muted':'#6C7A58','--line':'#CBD8B2','--line-2':'#9FB37B','--dark':'#3E5327','--paper':'#F7FAEF','--accent':'#5C7A2E','--bd':'#5C7A2E','--bk':'#2E7A6B','--ba':'#7A6B2E','--bch':'#A05A2C','--adm':'#6B2D5C' },
+    tangerine: { '--bg':'#FBEADC','--bg-2':'#FDF4EC','--ink':'#3E2113','--muted':'#94674A','--line':'#F0CDAF','--line-2':'#DDA378','--dark':'#8C3E14','--paper':'#FEF6EF','--accent':'#C65A20','--bd':'#C65A20','--bk':'#9A7A20','--ba':'#3E7A8C','--bch':'#8C4A6B','--adm':'#5C3E8C' },
+    estate:    { '--bg':'#E3E9F3','--bg-2':'#EFF3F9','--ink':'#182236','--muted':'#5F6E88','--line':'#C0CCE0','--line-2':'#8EA0BF','--dark':'#27395C','--paper':'#F2F5FA','--accent':'#2F4C7C','--bd':'#2F4C7C','--bk':'#2F7C5C','--ba':'#7C5C2F','--bch':'#7C2F4C','--adm':'#5C2F7C' },
+    cashmere:  { '--bg':'#E9EDF5','--bg-2':'#F3F6FB','--ink':'#232B3B','--muted':'#6D7891','--line':'#C8D2E4','--line-2':'#9FAFD1','--dark':'#4A5C7A','--paper':'#F5F8FC','--accent':'#5A76A8','--bd':'#5A76A8','--bk':'#4A8C74','--ba':'#8C744A','--bch':'#A85A6E','--adm':'#7A5AA8' },
+    oxford:    { '--bg':'#101A30','--bg-2':'#16233F','--ink':'#DDE6F5','--muted':'#8A9AC0','--line':'#2A3A5C','--line-2':'#405480','--dark':'#DDE6F5','--paper':'#13203A','--accent':'#7FA3E0','--bd':'#7FA3E0','--bk':'#6FCFA0','--ba':'#E0C47F','--bch':'#E08FA3','--adm':'#B79AE6' },
+    burgundy:  { '--bg':'#1F0F13','--bg-2':'#2A151B','--ink':'#F0DDE0','--muted':'#A8848A','--line':'#45252C','--line-2':'#683A44','--dark':'#F0DDE0','--paper':'#241216','--accent':'#C97B8A','--bd':'#C97B8A','--bk':'#8FC9A6','--ba':'#C9B78F','--bch':'#E0A08F','--adm':'#C08FD9' },
+    emerald:   { '--bg':'#0D1F18','--bg-2':'#122A20','--ink':'#D9EFE4','--muted':'#7FA894','--line':'#244537','--line-2':'#386150','--dark':'#D9EFE4','--paper':'#0F241B','--accent':'#5FBF94','--bd':'#5FBF94','--bk':'#BFE07F','--ba':'#7FB8E0','--bch':'#E0B97F','--adm':'#B08BD9' }
+};
+const DARK_THEMES = ['dark', 'night', 'oxford', 'burgundy', 'emerald'];
 const THEMES = [
     { id: 'default',   name: 'Классика',          color: '#EFE9DC' },
     { id: 'dark',      name: 'Тёмная',             color: '#17181A' },
@@ -88,13 +103,26 @@ const THEMES = [
 
 function applyTheme(id, color) {
     const root = document.documentElement;
+    /* очищаем ВСЕ ранее применённые инлайновые переменные (в т.ч. --adm),
+       иначе остатки прошлой темы накладываются на новую */
+    Object.keys(THEME_PALETTES).forEach((t) => {
+        Object.keys(THEME_PALETTES[t]).forEach((v) => root.style.removeProperty(v));
+    });
     CUSTOM_VARS.forEach((v) => root.style.removeProperty(v));
+    root.removeAttribute('data-dark');
     if (id === 'custom' && color) {
         const pal = buildPalette(color);
-        CUSTOM_VARS.forEach((v) => { if (pal[v]) root.style.setProperty(v, pal[v]); });
+        /* для произвольной темы оттенок админ-бейджа выводим из базового цвета */
+        pal['--adm'] = hslToHex((rgbToHsl.apply(null, hexToRgb(color)).h + 0.85) % 1, 0.55, 0.42);
+        CUSTOM_VARS.concat(['--adm']).forEach((v) => { if (pal[v]) root.style.setProperty(v, pal[v]); });
         root.setAttribute('data-theme', 'custom');
-    } else if (id && id !== 'default') {
+    } else if (THEME_PALETTES[id]) {
+        /* применяем палитру темы напрямую через inline-переменные —
+           так тема гарантированно работает независимо от загрузки CSS */
+        const pal = THEME_PALETTES[id];
+        Object.keys(pal).forEach((v) => root.style.setProperty(v, pal[v]));
         root.setAttribute('data-theme', id);
+        if (DARK_THEMES.indexOf(id) !== -1) root.setAttribute('data-dark', '');
     } else {
         root.removeAttribute('data-theme');
     }
@@ -189,7 +217,7 @@ if (colorInput) {
 /* ---------- ПОДМЕНЮ ---------- */
 const facItems = FAC.map((f) => `<li><a href="kafedry.html?fac=${encodeURIComponent(f)}">${f.replace(' науки', '')}</a></li>`).join('');
 const pubItems = Object.entries(STATUS).map(([key, s]) => `<li><a href="publications.html?status=${key}">${s.label}</a></li>`).join('');
-const roleItems = Object.entries(ROLES).map(([key, r]) => `<li><a href="znakomye.html?role=${key}">${r.label}</a></li>`).join('');
+const roleItems = Object.entries(ROLES).map(([key, r]) => `<li><a href="znakomye.html?mode=all&amp;role=${key}">${r.label}</a></li>`).join('');
 const reqItems = Object.entries(REQ_TYPES).map(([key, t]) => `<li><a href="requests.html?type=${key}">${t.label}</a></li>`).join('');
 document.getElementById('subnav').innerHTML = `
 <div class="dd"><button class="dd-btn" type="button" aria-haspopup="true" aria-expanded="false">Кафедры <span class="caret">▾</span></button><ul class="dd-menu">${facItems}</ul></div>
@@ -254,13 +282,13 @@ function initDropdown(rootSel, wrapCls, btnCls) {
 initDropdown('#subnav', 'dd', 'dd-btn');
 initDropdown('.hd-nav', 'hd-dd', 'hd-dd-btn');
     /* раскрываемые списки подменю: «Кафедры», «Публикации», «Коллеги», «Запросы» */
-    const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html', 'requests.html'];
+    const DD_HREFS = ['kafedry.html', 'publications.html', 'znakomye.html?mode=all', 'requests.html'];
     document.querySelectorAll('#subnav .dd').forEach((w, idx) => {
         const b = w.querySelector('.dd-btn');
         if (b) b.dataset.href = DD_HREFS[idx] || '';
         const ul = w.querySelector('.dd-menu');
         if (!ul) return;
-        const bdKey = { kafedry: 'depts', publications: 'pubs', znakomye: 'ppl', requests: 'reqs' }[DD_HREFS[idx].split('.')[0]];
+        const bdKey = { kafedry: 'depts', publications: 'pubs', znakomye: 'ppl', requests: 'reqs' }[DD_HREFS[idx].split('?')[0].split('.')[0]];
         ul.querySelectorAll('li > a').forEach((a) => {
             if (a.querySelector('.dd-badge')) return;
             const badge = document.createElement('span');

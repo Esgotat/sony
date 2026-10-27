@@ -75,7 +75,18 @@ const sortPubs = (list) => list.slice().sort((a, b) => b.year - a.year || a.id -
 const pubsOf = (person) => person.short
     ? sortPubs((Store.pubs || []).filter((p) => p.authors.includes(person.short)))
     : [];
-const effectiveUser = () => Object.assign({}, USER, LocalProfile.get(), LocalPeopleOvr.get(USER.id));
+const effectiveUser = () => {
+  const base = Object.assign({}, USER, LocalProfile.get(), LocalPeopleOvr.get(USER.id));
+  /* фото из общего синхронизируемого слоя — приоритетнее локальных копий:
+     так аватарку человека видят все пользователи (включая его собственную страницу) */
+  try {
+    if (window.LocalPeoplePhotos) {
+      const ph = LocalPeoplePhotos.byId(base.id);
+      if (ph && ph.photo) base.photo = ph.photo;
+    }
+  } catch (e) {}
+  return base;
+};
 const personById = (id) => (id === USER.id ? effectiveUser() : (Store.people || []).find((x) => x.id === id));
 const personByShort = (short) => {
     if (!short) return null;
@@ -148,11 +159,13 @@ function personCard(p) {
   const roles = (p.roles || []).map((r) => ROLES[r]
     ? `<span class="stat"><span class="b b-${r}" style="background:${ROLE_BG[r] || '#2D6A4F'}">${ROLES[r].letter}</span></span>`
     : '').join('');
-  const avIcon = p.photo
-    ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
-    : ((window.OU_icons && OU_icons.avatarSVG)
-        ? OU_icons.avatarSVG(p.name, r0, 96)
-        : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`);
+  const avIcon = (window.OU_icons && OU_icons.personAvatarHTML)
+    ? OU_icons.personAvatarHTML(p, 96)
+    : (p.photo
+        ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
+        : ((window.OU_icons && OU_icons.avatarSVG)
+            ? OU_icons.avatarSVG(p.name, r0, 96)
+            : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`));
   return `
   <a class="card card-link person-card" href="profile.html?id=${p.id}">
     <div class="card-emoji" aria-hidden="true">
@@ -182,11 +195,34 @@ function licBadgeHTML(p) {
     return '<span class="lic-badge" title="' + esc(CCL[p.license].hint) + '">' + esc(p.license) + '</span>';
 }
 
+/* Обложка публикации: картинка (фото/автор работы) тянется от верха до низа
+   секции, а текст (год, статус, название, авторы, издание) лежит поверх неё
+   на затемнении. */
+function pubCoverImgHTML(p) {
+    if (p.photo) return '<img class="pub-cover-img" src="' + esc(p.photo) + '" alt="">';
+    const firstAuthor = personByShort((p.authors || '').split(',')[0].trim());
+    if (firstAuthor && firstAuthor.photo) return '<img class="pub-cover-img" src="' + esc(firstAuthor.photo) + '" alt="">';
+    const name = firstAuthor ? firstAuthor.name : (p.authors || '');
+    const r0 = firstAuthor && firstAuthor.roles ? firstAuthor.roles[0] : 'res';
+    if (window.OU_icons && OU_icons.avatarSVG) {
+        /* фон-паттерн из сгенерированного SVG-автора: он заполняет всю секцию
+           от верха до низа и повторяется по тексту */
+        var svg = OU_icons.avatarSVG(name, r0, 240);
+        var uri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+        return '<span class="pub-cover-gen" style="background-image:url(&quot;' + uri + '&quot;)"></span>';
+    }
+    return '';
+}
+
 function pubCard(p) {
     const st = STATUS[p.status] || STATUS.wait;
     const d = DEPT_BY_N[p.dept];
     return `
 <a class="card card-link pub-card" style="--stripe:${d ? FAC_COLOR[d.f] || 'var(--ink)' : 'var(--ink)'}" href="publication.html?id=${p.id}">
+<div class="card-emoji pub-cover">
+${pubCoverImgHTML(p)}
+<div class="pub-cover-shade"></div>
+<div class="pub-cover-text">
 <div class="card-top">
 <span class="num">${esc(p.year)}</span>
 ${licBadgeHTML(p)}
@@ -195,23 +231,33 @@ ${licBadgeHTML(p)}
 <h3 class="card-title">${esc(p.title)}</h3>
 <p class="pub-authors">${esc(p.authors)}</p>
 <p class="pub-venue">${esc(p.venue)}${d ? ' · ' + esc(d.t) : ''}</p>
+</div>
+</div>
 </a>`;
 }
 
 function deptDetailHTML(d) {
     const s = deptStats(d.n);
     const creator = d.createdBy != null ? esc(d.creatorName || ('пользователь №' + d.createdBy)) : 'база университета';
+    const deptCover = d.photo
+        ? '<img class="dept-cover-img" src="' + esc(d.photo) + '" alt="Фото кафедры">'
+        : ((window.OU_icons && OU_icons.deptIconHTML) ? '<div class="dept-cover-gen">' + OU_icons.deptIconHTML(d) + '</div>' : '');
     return `
-<div>
-<div class="dept-emoji">${d.photo ? '<img class="dept-photo" src="' + esc(d.photo) + '" alt="Фото кафедры">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(d) : '')}</div>
+<div class="dept-cover-wrap">
+${deptCover}
+<div class="dept-cover-shade"></div>
+<div class="dept-cover-text">
+<div class="dept-cover-head">
 <span class="fac">${esc(d.f)}</span>
-<h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
-<p class="dept-desc">${esc(d.x || '')}</p>
 <div class="card-stats">
 <span class="stat"><i class="b b-d">Д</i>${s.d}</span>
 <span class="stat"><i class="b b-k">К</i>${s.k}</span>
 <span class="stat"><i class="b b-a">А</i>${s.a}</span>
 <span class="stat"><i class="b b-ch">Ч</i>${s.ch}</span>
+</div>
+</div>
+<h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
+<p class="dept-desc">${esc(d.x || '')}</p>
 </div>
 </div>
 <div>
@@ -226,11 +272,13 @@ function deptDetailHTML(d) {
 
 function profileHTML(person, extraRight) {
 const r0 = (person.roles && person.roles[0]) || 'res';
-const av = person.photo
+const av = (window.OU_icons && OU_icons.personAvatarHTML)
+    ? '<div class="avatar avatar-big">' + OU_icons.personAvatarHTML(person, 80, 'avatar-big') + '</div>'
+    : (person.photo
     ? '<img class="avatar avatar-big avatar-photo" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">'
     : ((window.OU_icons && OU_icons.avatarSVG)
     ? '<div class="avatar avatar-big svg">' + OU_icons.avatarSVG(person.name, r0, 80) + '</div>'
-    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>');
+    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>'));
 return `
 <div class="profile-left">
 ${av}
@@ -529,14 +577,16 @@ function deptCardHTML(c) {
 // ============================================================
 function initPeople() {
     const pre = params.get('role');
-    /* страница «Знакомые» всегда показывает только список знакомых; галочки переключения нет.
-       Коллег по роли можно посмотреть со ссылками вида znakomye.html?role=res */
-    const isFriendsMode = location.pathname.indexOf('znakomye') !== -1 &&
-        (params.get('mode') === 'friends' || !params.get('role'));
+    /* «Знакомые» (mode=friends) — личный список знакомых;
+       «Коллеги» (mode=all или переход из подменю «Коллеги», в т.ч. с ?role=) — все пользователи */
+    const isFriendsMode = params.get('mode') === 'friends';
     const state = {
         role: ['rev', 'res', 'sup', 'trn', 'adm'].includes(pre) ? pre : 'Все',
-        friendsOnly: isFriendsMode && !USER.guest
+        friendsOnly: !USER.guest && isFriendsMode
     };
+    /* подписываем заголовок страницы под выбранным режимом */
+    const titleEl = document.querySelector('.page-title');
+    if (titleEl) titleEl.textContent = state.friendsOnly ? 'Знакомые' : 'Коллеги';
 
     if (!USER.guest && !$('#addFriendBar')) {
         $('.filters-row').insertAdjacentHTML('afterend',
@@ -630,13 +680,16 @@ function initProfile() {
             btn.disabled = true; btn.textContent = 'Обработка…';
             const done = (dataUrl) => {
                 LocalProfile.save({ photo: dataUrl });
+                /* сохраняем фото в общий слой (ou_people_photos) и overrides —
+                   оба синхронизируются через облако, поэтому аватарку увидят все коллеги */
+                LocalPeopleOvr.update(person.id, { photo: dataUrl });
                 person.photo = dataUrl;
                 if (LocalUsers.byId(person.id)) LocalUsers.update(person.id, { photo: dataUrl });
                 try { window.dispatchEvent(new Event('ou:data')); } catch (err) {}
                 render();
             };
             if (window.OU_icons && OU_icons.readImage) {
-                OU_icons.readImage(f, 256, (err, dataUrl) => {
+                OU_icons.readImage(f, 512, (err, dataUrl) => {
                     if (err) { alert('Не удалось прочитать изображение.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
                     try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
                     catch (err2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); btn.disabled = false; btn.textContent = 'Фото профиля'; return; }
@@ -880,7 +933,8 @@ function initDeptPage() {
             const pf = phEl && phEl.files[0];
             if (pf) {
                 if (!/^image\//.test(pf.type)) { alert('Нужен файл изображения.'); return; }
-                OU_icons.readImage(pf, 320, (err, dataUrl) => {
+                /* обложка кафедры: кадрирование под соотношение секции (~16/7), высокое разрешение */
+                OU_icons.readImage(pf, 1400, (err, dataUrl) => {
                     if (err) { alert('Не удалось прочитать изображение.'); return; }
                     try { localStorage.setItem('__ou_photo_test', dataUrl); localStorage.removeItem('__ou_photo_test'); }
                     catch (e2) { alert('Память браузера заполнена — выберите изображение меньшего размера.'); return; }
@@ -1587,7 +1641,7 @@ ${all.map((d) => `<tr><td>${d.n}</td><td>${esc(d.t)}</td><td>${d.createdBy != nu
             const pf = pfEl && pfEl.files[0];
             const finish = () => { LocalDepts.add(rec); renderDepts(); };
             if (pf && window.OU_icons) {
-                OU_icons.readImage(pf, 320, (err, dataUrl) => { if (!err) rec.photo = dataUrl; finish(); });
+                OU_icons.readImage(pf, 1400, (err, dataUrl) => { if (!err) rec.photo = dataUrl; finish(); }, 16 / 7);
             } else finish();
         });
         $('#tab-depts').querySelectorAll('button[data-del-d]').forEach((btn) => {
