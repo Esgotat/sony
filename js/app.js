@@ -160,11 +160,11 @@ function personCard(p) {
     ? `<span class="stat"><span class="b b-${r}" style="background:${ROLE_BG[r] || '#2D6A4F'}">${ROLES[r].letter}</span></span>`
     : '').join('');
   const avIcon = (window.OU_icons && OU_icons.personAvatarHTML)
-    ? OU_icons.personAvatarHTML(p, 96)
+    ? OU_icons.personAvatarHTML(p, 96, '', true) /* карточки коллег: аватарка не в кружке, а на всю секцию */
     : (p.photo
-        ? '<img class="avatar-photo avatar-svg" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
+        ? '<img class="avatar-photo avatar-square" src="' + esc(p.photo) + '" alt="Фото: ' + esc(p.name) + '">'
         : ((window.OU_icons && OU_icons.avatarSVG)
-            ? OU_icons.avatarSVG(p.name, r0, 96)
+            ? OU_icons.avatarSVG(p.name, r0, 96, true)
             : `<span class="emoji-icon" style="background:${ROLE_BG[r0] || '#2D6A4F'}">${esc(initials)}</span>`));
   return `
   <a class="card card-link person-card" href="profile.html?id=${p.id}">
