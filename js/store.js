@@ -120,26 +120,198 @@ const CloudSync = {
     Object.keys(state).forEach((k) => {
       try { localStorage.setItem(k, JSON.stringify(state[k])); } catch (e) {}
     });
+    /* снимок последнего облачного состояния — нужен pushNow(), который не может
+       ждать сеть при закрытии страницы (без него last-writer-wins тёр чужие фото) */
+    try { localStorage.setItem('ou_cloud_prev', JSON.stringify(state)); } catch (e) {}
     this.silent = false;
   },
   async load() {
     try {
       const cloud = await FBApi.get('/state');
       if (!cloud || typeof cloud !== 'object' || Array.isArray(cloud)) return;
-      /* для общих списков (пользователи, кафедры и их фото/аватарки) облако — источник истины:
+      /* для общих списков (пользователи, кафедры) облако — источник истины:
          локальный кэш этого браузера не должен перетирать данные других пользователей */
       const merged = mergeState(this.readLocal(), cloud);
-      ['ou_users', 'ou_departments', 'ou_people_overrides'].forEach((k) => {
+      ['ou_users', 'ou_departments'].forEach((k) => {
         if (cloud[k] !== undefined) merged[k] = cloud[k];
       });
-      /* фото профилей — сливаем ПО ЛЮДЯМ (по _ts), а не целиком: иначе браузер,
-         который последним ушёл в облако, затрёт аватарки всех остальных коллег */
-      if (Array.isArray(cloud.ou_people_photos)) {
-        merged.ou_people_photos = mergeListByKey('ou_people_photos',
-          Array.isArray(merged.ou_people_photos) ? merged.ou_people_photos : [],
-          cloud.ou_people_photos);
+      /* ПРАВКИ ЛЮДЕЙ — сливаем ПО ЧЕЛОВЕКАМ (по id), а не целиком.
+         Раньше ou_people_overrides брался из облака как есть: если чужая аватарка
+         в нём потерялась (конфликт записей), восстановить её было нечем.
+         Теперь override каждого человека дополняется его более свежими полями
+         из личных слоёв (ou_profile_<id>, аккаунт в ou_users). */
+      {
+        const ov = mergeObjByKey('ou_people_overrides',
+          (merged.ou_people_overrides && typeof merged.ou_people_overrides === 'object') ? merged.ou_people_overrides : {},
+          (cloud.ou_people_overrides && typeof cloud.ou_people_overrides === 'object') ? cloud.ou_people_overrides : {});
+        [merged, cloud].forEach((src) => {
+          Object.keys(ov).forEach((pid) => {
+            const layers = [];
+            try {
+              const pr = src['ou_profile_' + pid];
+              if (pr && typeof pr === 'object') layers.push(pr);
+              const us = src.ou_users;
+              const arr = Array.isArray(us) ? us : (us ? Object.values(us) : []);
+              const acc = arr.find((u) => u && String(u.id) === String(pid));
+              if (acc && acc.photo) layers.push({ photo: acc.photo, _ts: acc._ts });
+            } catch (e) {}
+            layers.forEach((layer) => {
+              Object.keys(layer).forEach((f) => {
+                if (f === '_ts' || f === 'id') return;
+                if (layer[f] == null || layer[f] === '') return;
+                if (ov[pid][f] == null || ov[pid][f] === '' || (layer._ts || 0) >= (ov[pid]._ts || 0)) {
+                  ov[pid][f] = layer[f];
+                }
+              });
+              if ((layer._ts || 0) > (ov[pid]._ts || 0)) ov[pid]._ts = layer._ts;
+            });
+          });
+        });
+        merged.ou_people_overrides = ov;
+      }
+      /* ФОТО ПРОФИЛЕЙ — общий синхронизируемый слой. Собираем фото каждого
+         человека из ВСЕХ известных мест (ou_people_photos, ou_people_overrides,
+         ou_profile_<id>, ou_users) и берём самое свежее по _ts. Так аватарку
+         гарантированно видят все коллеги, даже если часть слоёв потерялась. */
+      {
+        const phArr = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+        const collectPhotos = (src) => {
+          const best = {};
+          const put = (id, url, ts) => {
+            if (id == null || !url || typeof url !== 'string') return;
+            const k = String(id);
+            const t = ts || 0;
+            if (!best[k] || t >= best[k]._ts) best[k] = { photo: url, _ts: t };
+          };
+          phArr(src.ou_people_photos).forEach((x) => x && put(x.id, x.photo, x._ts));
+          Object.keys(src.ou_people_overrides || {}).forEach((pid) => {
+            const o = src.ou_people_overrides[pid];
+            if (o && o.photo) put(pid, o.photo, o._ts);
+          });
+          Object.keys(src).forEach((k) => {
+            if (k.indexOf('ou_profile_') === 0) {
+              const p = src[k];
+              if (p && p.photo) put(k.slice('ou_profile_'.length), p.photo, p._ts);
+            }
+          });
+          phArr(src.ou_users).forEach((u) => u && u.photo && put(u.id, u.photo, u._ts));
+          return best;
+        };
+        const localPhotos = collectPhotos(this.readLocal());
+        const cloudPhotos = collectPhotos(cloud);
+        const photoMerged = [];
+        new Set([].concat(Object.keys(localPhotos), Object.keys(cloudPhotos))).forEach((id) => {
+          const a = localPhotos[id], b = cloudPhotos[id];
+          let pick = a && b ? ((b._ts >= a._ts) ? b : a) : (a || b);
+          /* фото из override'а человека — authoritative, если оно не старее слоя */
+          const o = merged.ou_people_overrides[id];
+          if (o && o.photo && (o._ts || 0) >= (pick ? pick._ts : -1)) {
+            pick = { photo: o.photo, _ts: (o._ts || 0) };
+          }
+          if (pick && pick.photo) {
+            photoMerged.push({ id: /^\d+$/.test(id) ? Number(id) : id, photo: pick.photo, _ts: pick._ts || _ts() });
+          }
+        });
+        merged.ou_people_photos = photoMerged;
       }
       this.writeAll(applyMessageDeletes(applyUserDeletes(merged)));
+      this.schedulePush();
+    } catch (e) { /* офлайн */ }
+  },
+  schedulePush() {
+    if (this.silent) return;
+    clearTimeout(this.timer);
+    this.timer = setTimeout(() => this.push(), 700);
+  },
+  /* слияние локального состояния с облаком: общие списки — из облака,
+     а фото профилей и правки людей сливаются ПО ЛЮДЯМ (по _ts), чтобы
+     браузер, ушедший в облако последним, не затёр аватарки коллег */
+  reconcile(local, cloud) {
+    let merged = mergeState(local, cloud);
+    ['ou_users', 'ou_departments'].forEach((k) => {
+      if (cloud[k] !== undefined) merged[k] = cloud[k];
+    });
+    /* ПРАВКИ ЛЮДЕЙ — сливаем по id, а не целиком */
+    {
+      const ov = mergeObjByKey('ou_people_overrides',
+        (merged.ou_people_overrides && typeof merged.ou_people_overrides === 'object') ? merged.ou_people_overrides : {},
+        (cloud.ou_people_overrides && typeof cloud.ou_people_overrides === 'object') ? cloud.ou_people_overrides : {});
+      [merged, cloud].forEach((src) => {
+        Object.keys(ov).forEach((pid) => {
+          const layers = [];
+          try {
+            const pr = src['ou_profile_' + pid];
+            if (pr && typeof pr === 'object') layers.push(pr);
+            const us = src.ou_users;
+            const arr = Array.isArray(us) ? us : (us ? Object.values(us) : []);
+            const acc = arr.find((u) => u && String(u.id) === String(pid));
+            if (acc && acc.photo) layers.push({ photo: acc.photo, _ts: acc._ts });
+          } catch (e) {}
+          layers.forEach((layer) => {
+            Object.keys(layer).forEach((f) => {
+              if (f === '_ts' || f === 'id') return;
+              if (layer[f] == null || layer[f] === '') return;
+              if (ov[pid][f] == null || ov[pid][f] === '' || (layer._ts || 0) >= (ov[pid]._ts || 0)) {
+                ov[pid][f] = layer[f];
+              }
+            });
+            if ((layer._ts || 0) > (ov[pid]._ts || 0)) ov[pid]._ts = layer._ts;
+          });
+        });
+      });
+      merged.ou_people_overrides = ov;
+    }
+    /* ФОТО ПРОФИЛЕЙ — общий слой: собираем фото каждого человека из всех
+       мест (ou_people_photos, ou_people_overrides, ou_profile_<id>, ou_users)
+       и берём самое свежее по _ts. Так аватарку гарантированно видят все. */
+    {
+      const phArr = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
+      const collectPhotos = (src) => {
+        const best = {};
+        const put = (id, url, ts) => {
+          if (id == null || !url || typeof url !== 'string') return;
+          const k = String(id);
+          const t = ts || 0;
+          if (!best[k] || t >= best[k]._ts) best[k] = { photo: url, _ts: t };
+        };
+        phArr(src.ou_people_photos).forEach((x) => x && put(x.id, x.photo, x._ts));
+        Object.keys(src.ou_people_overrides || {}).forEach((pid) => {
+          const o = src.ou_people_overrides[pid];
+          if (o && o.photo) put(pid, o.photo, o._ts);
+        });
+        Object.keys(src).forEach((k) => {
+          if (k.indexOf('ou_profile_') === 0) {
+            const p = src[k];
+            if (p && p.photo) put(k.slice('ou_profile_'.length), p.photo, p._ts);
+          }
+        });
+        phArr(src.ou_users).forEach((u) => u && u.photo && put(u.id, u.photo, u._ts));
+        return best;
+      };
+      const localPhotos = collectPhotos(local);
+      const cloudPhotos = collectPhotos(cloud);
+      const photoMerged = [];
+      new Set([].concat(Object.keys(localPhotos), Object.keys(cloudPhotos))).forEach((id) => {
+        const a = localPhotos[id], b = cloudPhotos[id];
+        let pick = a && b ? ((b._ts >= a._ts) ? b : a) : (a || b);
+        /* фото из override'а человека — authoritative, если оно не старее слоя */
+        const o = merged.ou_people_overrides[id];
+        if (o && o.photo && (o._ts || 0) >= (pick ? pick._ts : -1)) {
+          pick = { photo: o.photo, _ts: (o._ts || 0) };
+        }
+        if (pick && pick.photo) {
+          photoMerged.push({ id: /^\d+$/.test(id) ? Number(id) : id, photo: pick.photo, _ts: pick._ts || _ts() });
+        }
+      });
+      merged.ou_people_photos = photoMerged;
+    }
+    return merged;
+  },
+  async load() {
+    try {
+      const cloud = await FBApi.get('/state');
+      if (!cloud || typeof cloud !== 'object' || Array.isArray(cloud)) return;
+      this.writeAll(applyMessageDeletes(applyUserDeletes(this.reconcile(this.readLocal(), cloud))));
       this.schedulePush();
     } catch (e) { /* офлайн */ }
   },
@@ -151,11 +323,13 @@ const CloudSync = {
   async push() {
     if (this.silent) return;
     try {
-      let merged = this.readLocal();
+      const local = this.readLocal();
+      let merged = local;
       try {
         const cloud = await FBApi.get('/state');
-        if (cloud && typeof cloud === 'object') merged = mergeState(merged, cloud);
-      } catch (e) {}
+        if (cloud && typeof cloud === 'object') merged = this.reconcile(local, cloud);
+        else merged = applyMessageDeletes(applyUserDeletes(mergeState(local, {})));
+      } catch (e) { merged = local; }
       merged = this.strip(applyMessageDeletes(applyUserDeletes(merged)));
       await FBApi.put('/state', merged);
       this.writeAll(merged);
@@ -164,7 +338,14 @@ const CloudSync = {
   pushNow() {
     if (this.silent) return;
     try {
-      const merged = this.strip(applyMessageDeletes(applyUserDeletes(this.readLocal())));
+      /* при закрытии страницы тоже сливаем по-человечески (без ожидания сети):
+         иначе last-writer-wins затрёт чужие аватарки */
+      let merged = this.readLocal();
+      try {
+        const prev = JSON.parse(localStorage.getItem('ou_cloud_prev') || 'null');
+        if (prev && typeof prev === 'object') merged = this.reconcile(merged, prev);
+      } catch (e) {}
+      merged = this.strip(applyMessageDeletes(applyUserDeletes(merged)));
       FBApi.put('/state', merged).catch(() => {});
     } catch (e) {}
   }
