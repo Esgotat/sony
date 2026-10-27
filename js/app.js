@@ -632,6 +632,8 @@ function initProfile() {
             btn.disabled = true; btn.textContent = 'Обработка…';
             const done = (dataUrl) => {
                 LocalProfile.save({ photo: dataUrl });
+                /* сохраняем фото и в общий профиль пользователя, чтобы его видели другие */
+                LocalPeopleOvr.update(person.id, { photo: dataUrl });
                 person.photo = dataUrl;
                 if (LocalUsers.byId(person.id)) LocalUsers.update(person.id, { photo: dataUrl });
                 try { window.dispatchEvent(new Event('ou:data')); } catch (err) {}

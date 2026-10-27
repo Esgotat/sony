@@ -232,11 +232,25 @@ color: var(--ink);
 .dept-emoji .dept-ic .ou-ic { width: 44px; height: 44px; }
 .avatar-svg { display: block; border-radius: 50%; }
 .card.person-card .card-emoji .avatar-svg { width: 96px; height: 96px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
-/* фото на карточке человека — прямоугольное, заполняет всю область картинки */
+
+/* Загруженные фото пользователей — везде показываются как круглые аватарки */
+img.avatar-svg,
+.avatar-photo {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 50%;
+  background: #fff;
+}
+.card.person-card .card-emoji img.avatar-svg,
+.card.person-card .card-emoji .avatar-photo { width: 96px; height: 96px; }
+img.avatar-big,
+.avatar-photo.avatar-big { width: 80px; height: 80px; border: 3px solid var(--ink); border-radius: 50%; }
+/* фото на карточке человека — круглая аватарка, заполняет область картинки */
 .card.person-card .card-emoji .avatar-photo {
-width: 100%;
-height: 100%;
-border-radius: 0;
+width: 96px;
+height: 96px;
+border-radius: 50%;
 object-fit: cover;
 object-position: center top;
 }
@@ -265,8 +279,8 @@ border-radius: 0;
 object-fit: cover;
 object-position: center;
 }
-/* фото профиля — без овального скругления */
-img.avatar-photo { border-radius: 4px; object-fit: cover; }
+/* фото профиля — круглая аватарка */
+img.avatar-photo { border-radius: 50%; object-fit: cover; }
 .dept-title {
 font: 700 22px/1.2 var(--font-h);
 margin: 8px 0 10px;
@@ -857,8 +871,27 @@ color: var(--ink);
 .ref-link:hover { background: var(--bg-2); color: var(--accent); }
 .ref-link small { display: block; margin-top: 4px; font: 500 10px/1 var(--font-m); color: var(--muted); }
 
-/* ---------- ТЁМНЫЕ ТЕМЫ ---------- */
+/* ---------- ТЕМЫ ОФОРМЛЕНИЯ ---------- */
+/* Тёмная */
 html[data-theme='dark'] { --bg:#111; --bg-2:#1A1A1A; --ink:#E8E6E1; --muted:#888; --line:#333; --line-2:#444; --dark:#E8E6E1; --paper:#111; --accent:#E63946; --bd:#E63946; --bk:#52B788; --ba:#457B9D; --bch:#E9C46A; --adm:#9B5DE5; }
+/* Ночная библиотека (тёмная) */
+html[data-theme='night'] { --bg:#141210; --bg-2:#1E1B17; --ink:#EAE3D6; --muted:#948B7C; --line:#3A342C; --line-2:#57503F; --dark:#EAE3D6; --paper:#181512; --accent:#D9A441; --bd:#D9A441; --bk:#7FA88B; --ba:#8CA3C6; --bch:#C0895A; --adm:#B08BC6; }
+/* Тиффани (светлая) */
+html[data-theme='tiffany'] { --bg:#E4F4F3; --bg-2:#F1FAF9; --ink:#123B3C; --muted:#5E8A89; --line:#BCE0DE; --line-2:#8CC5C3; --dark:#0F5657; --paper:#F5FCFB; --accent:#2E8F90; --bd:#2E8F90; --bk:#4AA87C; --ba:#4A7FA8; --bch:#A8894A; --adm:#8A4AA8; }
+/* Гринери (светлая) */
+html[data-theme='greenery'] { --bg:#EEF3E1; --bg-2:#F6F9EE; --ink:#25301A; --muted:#6C7A58; --line:#CBD8B2; --line-2:#9FB37B; --dark:#3E5327; --paper:#F7FAEF; --accent:#5C7A2E; --bd:#5C7A2E; --bk:#2E7A6B; --ba:#7A6B2E; --bch:#A05A2C; --adm:#6B2D5C; }
+/* Танжерин (светлая) */
+html[data-theme='tangerine'] { --bg:#FBEADC; --bg-2:#FDF4EC; --ink:#3E2113; --muted:#94674A; --line:#F0CDAF; --line-2:#DDA378; --dark:#8C3E14; --paper:#FEF6EF; --accent:#C65A20; --bd:#C65A20; --bk:#9A7A20; --ba:#3E7A8C; --bch:#8C4A6B; --adm:#5C3E8C; }
+/* Эстейт-блю (светлая) */
+html[data-theme='estate'] { --bg:#E3E9F3; --bg-2:#EFF3F9; --ink:#182236; --muted:#5F6E88; --line:#C0CCE0; --line-2:#8EA0BF; --dark:#27395C; --paper:#F2F5FA; --accent:#2F4C7C; --bd:#2F4C7C; --bk:#2F7C5C; --ba:#7C5C2F; --bch:#7C2F4C; --adm:#5C2F7C; }
+/* Кашемир-блю (светлая) */
+html[data-theme='cashmere'] { --bg:#E9EDF5; --bg-2:#F3F6FB; --ink:#232B3B; --muted:#6D7891; --line:#C8D2E4; --line-2:#9FAFD1; --dark:#4A5C7A; --paper:#F5F8FC; --accent:#5A76A8; --bd:#5A76A8; --bk:#4A8C74; --ba:#8C744A; --bch:#A85A6E; --adm:#7A5AA8; }
+/* Оксфорд (тёмная) */
+html[data-theme='oxford'] { --bg:#101A30; --bg-2:#16233F; --ink:#DDE6F5; --muted:#8A9AC0; --line:#2A3A5C; --line-2:#405480; --dark:#DDE6F5; --paper:#13203A; --accent:#7FA3E0; --bd:#7FA3E0; --bk:#6FCFA0; --ba:#E0C47F; --bch:#E08FA3; --adm:#B79AE6; }
+/* Бургунди (тёмная) */
+html[data-theme='burgundy'] { --bg:#1F0F13; --bg-2:#2A151B; --ink:#F0DDE0; --muted:#A8848A; --line:#45252C; --line-2:#683A44; --dark:#F0DDE0; --paper:#241216; --accent:#C97B8A; --bd:#C97B8A; --bk:#8FC9A6; --ba:#C9B78F; --bch:#E0A08F; --adm:#C08FD9; }
+/* Изумруд (тёмная) */
+html[data-theme='emerald'] { --bg:#0D1F18; --bg-2:#122A20; --ink:#D9EFE4; --muted:#7FA894; --line:#244537; --line-2:#386150; --dark:#D9EFE4; --paper:#0F241B; --accent:#5FBF94; --bd:#5FBF94; --bk:#BFE07F; --ba:#7FB8E0; --bch:#E0B97F; --adm:#B08BD9; }
 
 /* ---------- АДАПТИВ ---------- */
 @media (max-width: 860px) {
