@@ -478,12 +478,12 @@ margin-bottom: 22px;
    лежит обложка. При наведении обложка «открывается» (rotateY) и остаётся
    на месте — странички под ней неподвижны. */
 .card.pub-card {
-padding: 18px 20px 16px 12px;
+padding: 18px 24px 16px 12px;
 background: transparent;
 border: none;
 border-radius: 0;
 box-shadow: none;
-overflow: hidden;
+overflow: visible; /* НЕ hidden: иначе тень/торец стопки листов обрезаются по рамке карточки */
 min-height: 340px;
 }
 .card.pub-card:hover {
@@ -496,10 +496,13 @@ position: relative;
 flex: 1;
 display: flex;
 }
-/* странички — лежат ПОД обложкой, видны справа; сами не двигаются */
+/* странички — лежат ПОД обложкой, видны справа; сами не двигаются.
+   inset 0 по краям .pub-book: правый край страничек совпадает с правым
+   краем карточки (работает на 1px шире обложки), поэтому ничего не
+   «выпирает» и не смещается вправо за пределы карточки */
 .pub-pages {
 position: absolute;
-inset: 0 0 0 46px;
+inset: 0;
 background: linear-gradient(180deg, #FFFDF6 0%, #F3EDDD 100%);
 border: 1px solid var(--line);
 border-radius: 2px 6px 6px 2px;
@@ -516,7 +519,7 @@ z-index: 1;
 content: "";
 position: absolute;
 top: 12%;
-right: -4px;
+right: 0;
 bottom: 12%;
 width: 4px;
 background: repeating-linear-gradient(180deg, var(--line) 0 2px, transparent 2px 5px);
@@ -573,7 +576,7 @@ opacity: 0.8;
    правый край: 100% здесь считается от ширины самой книжки (.pub-book),
    а не от всей карточки с полями. */
 .card.pub-card .card-emoji.pub-cover {
---pub-cover-w: calc(100% - 46px);
+--pub-cover-w: calc(100% - 12px); /* странички выглядывают из-под обложки на 12px */
 position: absolute;
 top: 0;
 left: 0;
@@ -600,8 +603,12 @@ will-change: transform;
 }
 /* подстраховка: обложка никогда не выходит за границы самой карточки */
 .card.pub-card .pub-book { max-width: 100%; }
+/* на широких экранах обложка шире страничек: она полностью закрывает
+   «ступеньки» листов, а выглядывающий из-под её правого края торец
+   стопки (см. box-shadow обложки) остаётся внутри карточки */
 @media (min-width: 641px) {
-.card.pub-card .card-emoji.pub-cover { --pub-cover-w: min(calc(100% - 46px), calc(100% - 20px)); }
+.card.pub-card .card-emoji.pub-cover { --pub-cover-w: calc(100% + 1px); }
+.card.pub-card .pub-pages::after { display: none; }
 }
 .card.pub-card:hover .card-emoji.pub-cover {
 transform: perspective(900px) rotateY(-14deg);
@@ -703,7 +710,6 @@ text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
 .card.pub-card .pub-cover .pub-cover-text .pub-dept { padding-bottom: 14px; }
 /* на узких экранах обложка лежит ровно поверх страничек (те не видны, пока книга закрыта) */
 @media (max-width: 640px) {
-.pub-pages { inset: 0; }
 .card.pub-card .card-emoji.pub-cover { --pub-cover-w: 100%; width: var(--pub-cover-w); }
 }
 /* легенда и кнопка «создать» в заголовке страницы — в одной строке, по краям */
