@@ -114,27 +114,32 @@ place-items: center;
 }
 
 /* ---------- ПЛИТКИ ---------- */
-.tiles { display: flex; gap: 0; margin-top: 24px; border-top: 1px solid var(--line); }
+/* Компактные счётчики («Публикаций · Проверено · На проверке · Отказ»):
+   плотная строка из небольших плиток, переносятся группами на узких экранах */
+.tiles { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
 .tile {
-flex: 1;
-padding: 16px 20px;
-border-right: 1px solid var(--line);
+flex: 0 1 auto;
+min-width: 108px;
+padding: 10px 14px;
+border: 1px solid var(--line);
+border-radius: 6px;
+background: var(--bg-2);
 text-align: left;
 }
-.tile:last-child { border-right: none; }
-.tile:hover { background: var(--bg-2); }
+.tile:hover { background: var(--paper); border-color: var(--line-2); }
 .tile b {
 display: block;
-font: 900 28px/1 var(--font-b);
+font: 900 20px/1 var(--font-b);
 color: var(--ink);
 }
 .tile span {
-font: 600 9px/1 var(--font-m);
-letter-spacing: 0.15em;
+font: 600 8.5px/1 var(--font-m);
+letter-spacing: 0.12em;
 text-transform: uppercase;
 color: var(--muted);
 margin-top: 4px;
 display: block;
+white-space: nowrap;
 }
 a.tile-btn {
 text-decoration: none;
@@ -398,6 +403,44 @@ color: transparent;
 .dept-cover-wrap .b.b-k  { background: rgba(184, 134, 11, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
 .dept-cover-wrap .b.b-a  { background: rgba(69, 123, 157, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
 .dept-cover-wrap .b.b-ch { background: rgba(196, 30, 58, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
+/* Д/К/А/Ч — вынесены из обложки в компактный ряд под ней (яркие залитые цвета, белая буква) */
+.dept-stats-row.card-stats {
+display: flex;
+flex-wrap: wrap;
+gap: 10px;
+padding: 12px 4px 2px;
+}
+.dept-stats-row.card-stats .stat {
+display: inline-flex;
+align-items: center;
+gap: 6px;
+font: 600 12px/1 var(--font-b);
+letter-spacing: 0.05em;
+text-transform: uppercase;
+color: var(--ink);
+}
+.dept-stats-row .b {
+width: 24px;
+height: 24px;
+font-size: 11px;
+border-radius: 3px;
+border: none;
+font-weight: 800;
+display: inline-grid;
+place-items: center;
+color: #fff !important;
+-webkit-text-fill-color: #fff !important;
+}
+.dept-stats-row .b.b-d  { background: #2D6A4F !important; }
+.dept-stats-row .b.b-k  { background: #B8860B !important; }
+.dept-stats-row .b.b-a  { background: #457B9D !important; }
+.dept-stats-row .b.b-ch { background: #C41E3A !important; }
+/* аватарка пользователя на его странице — как обложка кафедры */
+.profile-card:has(.profile-left-cover) { grid-template-columns: 1fr; }
+.profile-left-cover { width: 100%; }
+.profile-cover { min-height: 180px; }
+.profile-cover-name { font-size: 24px; }
+.profile-cover .card-stats .stat { color: rgba(255,255,255,.92); }
 .dept-title {
 font: 700 22px/1.2 var(--font-h);
 margin: 8px 0 10px;
@@ -1108,10 +1151,25 @@ border: 1px solid var(--line); border-radius: 50%;
 background: var(--bg-2); color: var(--muted);
 cursor: pointer; opacity: 0; transition: opacity .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
 }
-.msg:hover .msg-edit-btn, .msg:focus-within .msg-edit-btn { opacity: 1; }
+/* корзина — удаление своего сообщения, рядом с карандашом */
+.msg-del-btn {
+position: absolute; top: 50%; transform: translateY(-50%); right: -64px;
+width: 26px; height: 26px; padding: 0;
+display: inline-flex; align-items: center; justify-content: center;
+border: 1px solid var(--line); border-radius: 50%;
+background: var(--bg-2); color: var(--muted);
+cursor: pointer; opacity: 0; transition: opacity .15s ease, background .15s ease, color .15s ease, border-color .15s ease;
+}
+.msg:hover .msg-edit-btn, .msg:focus-within .msg-edit-btn,
+.msg:hover .msg-del-btn, .msg:focus-within .msg-del-btn { opacity: 1; }
 .msg-edit-btn:hover { background: var(--accent); border-color: var(--accent); color: #FFF; }
-@media (hover: none) { .msg-edit-btn { opacity: .7; } } /* тач: всегда виден, но не кричит */
-@media (max-width: 640px) { .msg.me .msg-edit-btn { right: 4px; top: 4px; transform: none; } }
+.msg-del-btn:hover { background: #C41E3A; border-color: #C41E3A; color: #FFF; }
+@media (hover: none) { .msg-edit-btn, .msg-del-btn { opacity: .7; } } /* тач: всегда виден, но не кричит */
+@media (max-width: 640px) {
+.msg.me { margin-right: 60px; } /* место под карандаш и корзину справа от пузыря */
+.msg.me .msg-edit-btn { right: -32px; top: 50%; transform: translateY(-50%); }
+.msg.me .msg-del-btn { right: -64px; top: 50%; transform: translateY(-50%); }
+}
 /* режим редактирования: поле + компактные кнопки Сохранить/Отмена */
 .msg-edit-area {
 display: block; width: 100%; min-height: 54px; margin-top: 2px;
@@ -1315,8 +1373,6 @@ html[data-theme='emerald'] { --bg:#0D1F18; --bg-2:#122A20; --ink:#D9EFE4; --mute
 }
 @media (max-width: 700px) {
 .fld-row { grid-template-columns: 1fr; }
-.tiles { flex-wrap: wrap; }
-.tile { flex: 1 1 calc(50% - 1px); border-bottom: 1px solid var(--line); }
 }
 @media (max-width: 640px) {
 .content { padding: 20px 16px 32px; }
@@ -1339,10 +1395,28 @@ html[data-theme='emerald'] { --bg:#0D1F18; --bg-2:#122A20; --ink:#D9EFE4; --mute
 .profile-name { font-size: 22px; }
 .pub-title { font-size: 22px; }
 .dept-title { font-size: 18px; }
-.theme-menu { position: fixed; top: auto; bottom: 0; left: 0; right: 0; max-height: 60vh; border-radius: 12px 12px 0 0; }
+/* меню тем — привязано к кнопке 🎨 (не «прибито» к низу экрана).
+   .hd-theme-wrap — position:relative, поэтому меню раскрывается прямо под кнопкой */
+.hd-theme-wrap { position: relative; }
+.theme-menu {
+position: absolute;
+top: calc(100% + 8px);
+bottom: auto;
+left: auto;
+right: 0;
+min-width: 210px;
+max-height: 52vh;
+border-radius: 6px;
+}
 .hd-nav > a { display: flex; width: 100%; border-bottom: 1px solid var(--line); }
 .hd-nav > a:last-child { border-bottom: none; }
 .hd-nav a.me-page, .hd-nav a.me-link { border-radius: 0; }
+/* счётчики публикаций на телефоне — компактная строка-сетка, а не стопка плиток */
+.tiles { flex-direction: row; flex-wrap: wrap; gap: 6px; margin-top: 16px; border-top: none; }
+.tile { flex: 1 1 calc(50% - 6px); border: 1px solid var(--line); border-radius: 6px; background: var(--bg-2); padding: 8px 10px; min-width: 0; }
+.tile b { font-size: 20px; }
+.tile span { margin-top: 2px; letter-spacing: 0.08em; }
+a.tile-btn { flex: 1 1 100%; text-align: center; }
 }
 /* ============================================================
 ЖАЛОБЫ · форма «Письмо администрации» + вкладка в админ-панели

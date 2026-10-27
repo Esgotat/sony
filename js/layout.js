@@ -193,14 +193,14 @@ const unreadComplaints = (() => {
   } catch (e) { return 0; }
 })();
 
-document.getElementById('hd').innerHTML = `
-<a class="brand" href="index.html"><span class="brand-line1">Open</span><span class="brand-line2">University</span></a>
-<nav class="hd-nav" aria-label="Основная навигация">
-${links.map((n) => {
+/* Пункты шапки: первые шесть — «Моя страница», «Главная», «Знакомые»,
+   «Моя кафедра», «Кабинет», «Админ панель» (+«Выйти») — в один уровень,
+   остальные («Кафедры», «Публикации», «Коллеги», «Запросы») — во второй. */
+const navMain = links.map((n) => {
     const cls = [n.extra || '', n.id === active ? 'on' : ''].filter(Boolean).join(' ');
     return `<a href="${n.href}"${cls ? ` class="${cls}"` : ''}${n.id === active ? ' aria-current="page"' : ''}>${n.label}</a>`;
-}).join('')}
-${!USER.guest ? `
+}).join('');
+const navCab = !USER.guest ? `
 <div class="hd-dd">
 <button class="hd-dd-btn${cabinetOn ? ' on' : ''}" type="button" aria-haspopup="true" aria-expanded="false" id="cabBtn">Кабинет <span class="caret">▾</span><span class="hd-badge" id="cabBadge" hidden></span></button>
 <ul class="hd-dd-menu">
@@ -209,20 +209,30 @@ ${!USER.guest ? `
 <li><a href="chats.html"><span class="dd-label">Мои чаты</span><span class="dd-badge" data-bd="chats" hidden></span></a></li>
 <li><a href="complaint.html"><span class="dd-label">Написать администрации</span><span class="dd-badge" data-bd="cmp" hidden></span></a></li>
 </ul>
-</div>` : ''}
-${isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель<span class="hd-badge" data-bd="admCmp" hidden></span></a>` : ''}
-${USER.guest
+</div>` : '';
+const navAdmin = isAdmin(USER) ? `<a href="admin.html"${active === 'admin' ? ' class="on" aria-current="page"' : ''}>Админ-панель<span class="hd-badge" data-bd="admCmp" hidden></span></a>` : '';
+const navAuth = USER.guest
     ? '<a href="login.html" class="me-link">Войти</a>'
-    : '<a href="#" class="me-link" id="logoutBtn">Выйти</a>'}
+    : '<a href="#" class="me-link" id="logoutBtn">Выйти</a>';
+
+document.getElementById('hd').innerHTML = `
+<a class="brand" href="index.html"><span class="brand-line1">Open</span><span class="brand-line2">University</span></a>
+<nav class="hd-nav" aria-label="Основная навигация">
+${navMain}
+${navCab}
+${navAdmin}
+${navAuth}
 </nav>
 <input class="hd-search" id="siteSearch" type="search" placeholder="поиск по сайту…" aria-label="Поиск по сайту">
-<button class="hd-theme" id="themeBtn" type="button" title="Сменить тему">🎨</button>
+<div class="hd-theme-wrap">
+<button class="hd-theme" id="themeBtn" type="button" title="Сменить тему" aria-haspopup="true" aria-expanded="false">🎨</button>
 <div class="theme-menu" id="themeMenu" hidden>
 ${THEMES.map((t) => '<button type="button" data-theme-id="' + t.id + '"><i style="background:' + t.color + '"></i>' + t.name + '</button>').join('')}
 <label class="theme-custom">
 <input type="color" id="themeColor" value="${pref.color}" aria-label="Выбрать свой цвет">
 <span>Своя…</span>
 </label>
+</div>
 </div>
 `;
 
@@ -233,9 +243,14 @@ const themeBtn = document.getElementById('themeBtn');
 const themeMenu = document.getElementById('themeMenu');
 const colorInput = document.getElementById('themeColor');
 if (themeBtn && themeMenu) {
-    themeBtn.addEventListener('click', (e) => { e.stopPropagation(); themeMenu.hidden = !themeMenu.hidden; });
+    /* единственный обработчик: тап по кнопке тем только открывает/закрывает меню */
+    themeBtn.addEventListener('click', (e) => {
+        e.preventDefault(); e.stopPropagation();
+        themeMenu.hidden = !themeMenu.hidden;
+        themeBtn.setAttribute('aria-expanded', String(!themeMenu.hidden));
+    });
     document.addEventListener('click', (e) => {
-        if (!e.target.closest('.theme-menu') && !e.target.closest('.hd-theme')) themeMenu.hidden = true;
+        if (!e.target.closest('.hd-theme-wrap')) { themeMenu.hidden = true; themeBtn.setAttribute('aria-expanded', 'false'); }
     });
 }
 if (themeMenu) {

@@ -262,16 +262,16 @@ ${deptCover}
 <div class="dept-cover-text">
 <div class="dept-cover-head">
 <span class="fac">${esc(d.f)}</span>
-<div class="card-stats">
-<span class="stat"><i class="b b-d">Д</i>${s.d}</span>
-<span class="stat"><i class="b b-k">К</i>${s.k}</span>
-<span class="stat"><i class="b b-a">А</i>${s.a}</span>
-<span class="stat"><i class="b b-ch">Ч</i>${s.ch}</span>
-</div>
 </div>
 <h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
 <p class="dept-desc">${esc(d.x || '')}</p>
 </div>
+</div>
+<div class="dept-stats-row card-stats">
+<span class="stat"><i class="b b-d">Д</i>${s.d}</span>
+<span class="stat"><i class="b b-k">К</i>${s.k}</span>
+<span class="stat"><i class="b b-a">А</i>${s.a}</span>
+<span class="stat"><i class="b b-ch">Ч</i>${s.ch}</span>
 </div>
 <div>
 <div class="dstat"><span>Создатель</span><i class="dots"></i><b class="txt">${creator}</b></div>
@@ -285,23 +285,30 @@ ${deptCover}
 
 function profileHTML(person, extraRight) {
 const r0 = (person.roles && person.roles[0]) || 'res';
-const av = (window.OU_icons && OU_icons.personAvatarHTML)
-    ? '<div class="avatar avatar-big">' + OU_icons.personAvatarHTML(person, 80, 'avatar-big') + '</div>'
-    : (person.photo
-    ? '<img class="avatar avatar-big avatar-photo" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">'
-    : ((window.OU_icons && OU_icons.avatarSVG)
-    ? '<div class="avatar avatar-big svg">' + OU_icons.avatarSVG(person.name, r0, 80) + '</div>'
-    : '<div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div>'));
-return `
-<div class="profile-left">
-${av}
-<div>
-<h2 class="profile-name">${esc(person.name)}</h2>
-<p class="person-note">${esc(person.note || '')}</p>
+/* аватарка на странице пользователя — как у кафедр: широкая секция-обложка с фото/иконкой от края до края */
+let coverInner;
+if (person.photo) {
+    coverInner = '<img class="dept-cover-img" src="' + esc(person.photo) + '" alt="Фото: ' + esc(person.name) + '">';
+} else if (window.OU_icons && OU_icons.personAvatarHTML) {
+    coverInner = '<div class="dept-cover-gen">' + OU_icons.personAvatarHTML(person, 140, '') + '</div>';
+} else {
+    coverInner = '<div class="dept-cover-gen"><div class="avatar avatar-big av-' + r0 + '">' + esc(initialsOf(person.name)) + '</div></div>';
+}
+const av = `
+<div class="profile-cover dept-cover-wrap">
+${coverInner}
+<div class="dept-cover-shade"></div>
+<div class="dept-cover-text">
+<h2 class="dept-title profile-cover-name">${esc(person.name)}</h2>
+<p class="dept-desc">${esc(person.note || '')}</p>
 <div class="card-stats">
 ${(person.roles || []).map((r) => ROLES[r] ? `<span class="stat"><span class="b b-${r}" style="background:${ROLES[r].color};color:#FFF">${ROLES[r].letter}</span>${esc(ROLES[r].label)}</span>` : '').join('')}
 </div>
 </div>
+</div>`;
+return `
+<div class="profile-left profile-left-cover">
+${av}
 </div>
 <div>${extraRight}</div>`;
 }
@@ -677,10 +684,12 @@ function initProfile() {
     $('#ownerOnly').style.display = isOwner ? '' : 'none';
 
     if (isOwner && !$('#resetBtn')) {
+        /* кнопки «Фото профиля» и «Сбросить правки» появляются только в режиме редактирования профиля */
         $('#ownerBar').insertAdjacentHTML('beforeend',
+            '<span id="editOnlyBtns" hidden>' +
             ' <button class="edit-btn" id="photoBtn" type="button">Фото профиля</button>' +
             ' <input type="file" id="photoInput" accept="image/*" hidden>' +
-            ' <button class="edit-btn" id="resetBtn" type="button">Сбросить правки</button>');
+            ' <button class="edit-btn" id="resetBtn" type="button">Сбросить правки</button></span>');
         /* загрузка фото профиля: сжимается до 256px и хранится как dataURL */
         $('#photoBtn').addEventListener('click', () => $('#photoInput').click());
         $('#photoInput').addEventListener('change', (e) => {
@@ -836,8 +845,12 @@ function initProfile() {
             $('#fDeg').value = person.deg || '';
             $('#editForm').hidden = false;
             $('#editBtn').disabled = true;
+            const eob = $('#editOnlyBtns'); if (eob) eob.hidden = false; /* показать «Фото профиля» / «Сбросить правки» */
         });
-        $('#cancelBtn').addEventListener('click', () => { $('#editForm').hidden = true; $('#editBtn').disabled = false; });
+        $('#cancelBtn').addEventListener('click', () => {
+            $('#editForm').hidden = true; $('#editBtn').disabled = false;
+            const eob = $('#editOnlyBtns'); if (eob) eob.hidden = true;
+        });
         $('#editForm').addEventListener('submit', (e) => {
             e.preventDefault();
             const deptVal = $('#fDept').value;
@@ -854,6 +867,7 @@ function initProfile() {
             if (LocalUsers.byId(person.id)) LocalUsers.update(person.id, patch);
             $('#editForm').hidden = true;
             $('#editBtn').disabled = false;
+            const eob2 = $('#editOnlyBtns'); if (eob2) eob2.hidden = true; /* скрыть фото/сброс вне редактирования */
             render();
         });
         $('#createDeptBtn').addEventListener('click', () => { $('#newDeptForm').hidden = !$('#newDeptForm').hidden; });
@@ -925,11 +939,34 @@ function initDeptPage() {
             '<div class="fld-row"><label class="fld"><span>Фото кафедры (необязательно)</span>' +
             '<input type="file" id="edPhoto" accept="image/*"></label>' +
             '<label class="fld chk-fld"><span>&nbsp;</span><label class="switch"><input type="checkbox" id="edPhotoClear"> Удалить фото</label></label></div>' +
+            /* управление составом кафедры — внутри формы редактирования */
+            '<h3 class="form-sub" style="margin:18px 0 8px">Управление составом</h3>' +
+            '<div class="mgr-list" id="manageList"></div>' +
             '<div class="form-actions"><button class="file-btn" type="submit">Сохранить</button> ' +
             '<button class="edit-btn" id="edCancel" type="button">Отмена</button></div></form>');
         $('#edFac').innerHTML = FAC.map((f) => '<option' + (f === d.f ? ' selected' : '') + '>' + esc(f) + '</option>').join('');
         $('#edName').value = d.t; $('#edDesc').value = d.x || '';
-        $('#editDeptBtn').addEventListener('click', () => { $('#editDeptForm').hidden = !$('#editDeptForm').hidden; });
+        const fillManageList = () => {
+            const ml = $('#manageList'); if (!ml) return;
+            const members = Store.people.filter((p) => p.dept === d.n);
+            ml.innerHTML = members.map((p) =>
+                '<div class="mgr-row"><b>' + esc(p.name) + '</b><button class="edit-btn danger-btn" data-kick="' + p.id + '" type="button">Выгнать</button></div>'
+            ).join('') || '<div class="empty">На кафедре пока никого.</div>';
+            ml.querySelectorAll('[data-kick]').forEach((b) => {
+                b.addEventListener('click', () => {
+                    const pid = +b.dataset.kick;
+                    const p = personById(pid);
+                    if (!confirm('Убрать ' + (p ? p.name : 'этого человека') + '?')) return;
+                    LocalPeopleOvr.update(pid, { dept: null });
+                    if (LocalUsers.byId(pid)) LocalUsers.update(pid, { dept: null });
+                    location.reload();
+                });
+            });
+        };
+        $('#editDeptBtn').addEventListener('click', () => {
+            $('#editDeptForm').hidden = !$('#editDeptForm').hidden;
+            if (!$('#editDeptForm').hidden) fillManageList();
+        });
         $('#edCancel').addEventListener('click', () => { $('#editDeptForm').hidden = true; });
         $('#editDeptForm').addEventListener('submit', (e) => {
             e.preventDefault();
@@ -962,23 +999,7 @@ function initDeptPage() {
     stagger($('#pplCards').querySelectorAll('.card'));
     $('#pplCount').textContent = ppl.length + ' ' + plural(ppl.length, ['человек', 'человека', 'человек']);
     $('#emptyPpl').hidden = ppl.length !== 0;
-    if (canManageDept(d)) {
-        $('#pplCards').insertAdjacentHTML('afterend',
-            '<h2 class="sub-title">Управление составом</h2><div class="mgr-list" id="manageList"></div>');
-        $('#manageList').innerHTML = ppl.map((p) =>
-            '<div class="mgr-row"><b>' + esc(p.name) + '</b><button class="edit-btn danger-btn" data-kick="' + p.id + '" type="button">Выгнать</button></div>'
-        ).join('') || '<div class="empty">На кафедре пока никого.</div>';
-        $('#manageList').querySelectorAll('[data-kick]').forEach((b) => {
-            b.addEventListener('click', () => {
-                const pid = +b.dataset.kick;
-                const p = personById(pid);
-                if (!confirm('Убрать ' + (p ? p.name : 'этого человека') + '?')) return;
-                LocalPeopleOvr.update(pid, { dept: null });
-                if (LocalUsers.byId(pid)) LocalUsers.update(pid, { dept: null });
-                location.reload();
-            });
-        });
-    }
+    /* управление составом перенесено внутрь формы редактирования кафедры (см. editDeptForm) */
     const pubs = sortPubs((Store.pubs || []).filter((p) => p.dept === d.n));
     $('#pubCards').innerHTML = pubs.map(pubCard).join('');
     stagger($('#pubCards').querySelectorAll('.card'));
@@ -2223,12 +2244,24 @@ function initChats() {
             '<span class="msg-text">' + esc(m.text) + '</span>' +
             (m.from === USER.id ? '<button type="button" class="msg-edit-btn" data-ed="' + m.id + '" title="Редактировать" aria-label="Редактировать сообщение">' +
                 '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20l1.2-4L16 5.2 18.8 8 8 18.8 4 20z"/><path d="m14 7 3 3"/></svg>' +
+                '</button>' +
+                '<button type="button" class="msg-del-btn" data-del="' + m.id + '" title="Удалить" aria-label="Удалить сообщение">' +
+                '<svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M8 6V4h8v2"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v5M14 11v5"/></svg>' +
                 '</button>' : '') +
             '</div>'
         ).join('') || '<div class="empty">Напишите первым.</div>';
     }
-    /* инлайн-редактирование: клик по карандашу на краю сообщения */
+    /* инлайн-редактирование и удаление: клик по кнопкам на краю своего сообщения */
     $('#chatThread').addEventListener('click', (e) => {
+        const del = e.target.closest('[data-del]');
+        if (del) {
+            const m = LocalMessages.list().find((x) => x.id === +del.dataset.del);
+            if (!m || m.from !== USER.id) return;
+            if (!confirm('Удалить это сообщение?')) return;
+            LocalMessages.remove(m.id);
+            renderThread(); renderList();
+            return;
+        }
         const ed = e.target.closest('[data-ed]');
         if (!ed) return;
         const msgEl = ed.closest('.msg');
