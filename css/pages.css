@@ -367,8 +367,8 @@ letter-spacing: 0.05em;
 text-transform: uppercase;
 color: rgba(255, 255, 255, 0.92);
 }
-/* буквы Д/К/А/Ч — прежние цвета, слегка прозрачные */
-.dept-cover-wrap .card-stats .stat .b {
+/* буквы Д/К/А/Ч — фон нужного (фирменного) цвета, слегка прозрачный; сами буквы полностью прозрачные */
+.dept-cover-wrap .b {
 width: 24px;
 height: 24px;
 font-size: 11px;
@@ -377,12 +377,13 @@ border: none;
 font-weight: 800;
 display: inline-grid;
 place-items: center;
-background: rgba(255, 255, 255, 0.82);
+color: transparent;
 }
-.dept-cover-wrap .card-stats .stat .b.b-d  { color: rgba(45, 106, 79, 0.88); }
-.dept-cover-wrap .card-stats .stat .b.b-k  { color: rgba(184, 134, 11, 0.88); }
-.dept-cover-wrap .card-stats .stat .b.b-a  { color: rgba(69, 123, 157, 0.88); }
-.dept-cover-wrap .card-stats .stat .b.b-ch { color: rgba(196, 30, 58, 0.88); }
+/* прозрачная буква поверх затемнения — фон просвечивает тёмным (буква видна как "вырезанная") */
+.dept-cover-wrap .b.b-d  { background: rgba(45, 106, 79, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
+.dept-cover-wrap .b.b-k  { background: rgba(184, 134, 11, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
+.dept-cover-wrap .b.b-a  { background: rgba(69, 123, 157, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
+.dept-cover-wrap .b.b-ch { background: rgba(196, 30, 58, 0.75) !important; color: transparent !important; -webkit-text-fill-color: transparent !important; }
 .dept-title {
 font: 700 22px/1.2 var(--font-h);
 margin: 8px 0 10px;
