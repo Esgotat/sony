@@ -286,16 +286,120 @@ object-position: center;
 }
 /* фото профиля — круглая аватарка */
 img.avatar-photo { border-radius: 50%; object-fit: cover; }
+
+/* ---------- ОБЛОЖКА КАФЕДРЫ (картинка от верха до низа секции, текст поверх затемнения) ---------- */
+.dept-cover-wrap {
+position: relative;
+display: flex;
+flex-direction: column;
+min-height: 260px;
+border-radius: 6px;
+overflow: hidden;
+background: var(--bg-2);
+border: 1px solid var(--line);
+}
+.dept-cover-wrap .dept-cover-img {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+object-fit: cover;
+object-position: center;
+display: block;
+border-radius: 0;
+}
+/* сгенерированная иконка вместо фото — служит фоном обложки */
+.dept-cover-wrap .dept-cover-gen {
+position: absolute;
+inset: 0;
+display: grid;
+place-items: center;
+background: linear-gradient(135deg, var(--bg-2), var(--paper));
+}
+.dept-cover-wrap .dept-cover-gen svg.ou-ic,
+.dept-cover-wrap .dept-cover-gen .ou-ic {
+width: 140px;
+height: 140px;
+opacity: 0.5;
+}
+/* затемнение, поверх которого читается белый текст */
+.dept-cover-wrap .dept-cover-shade {
+position: absolute;
+inset: 0;
+z-index: 1;
+pointer-events: none;
+background: linear-gradient(180deg, rgba(15, 15, 15, 0.45) 0%, rgba(15, 15, 15, 0.25) 40%, rgba(15, 15, 15, 0.78) 100%);
+}
+.dept-cover-wrap .dept-cover-text {
+position: relative;
+z-index: 2;
+display: flex;
+flex-direction: column;
+justify-content: space-between;
+flex: 1;
+padding: 18px 22px;
+color: #fff;
+}
+.dept-cover-wrap .dept-cover-head {
+display: flex;
+align-items: flex-start;
+justify-content: space-between;
+gap: 12px;
+}
+.dept-cover-wrap .dept-cover-head .fac {
+font: 700 11px/1 var(--font-m);
+letter-spacing: 0.15em;
+text-transform: uppercase;
+color: rgba(255, 255, 255, 0.8);
+text-align: left;
+}
+.dept-cover-wrap .card-stats {
+display: flex;
+flex-wrap: wrap;
+gap: 8px;
+}
+.dept-cover-wrap .card-stats .stat {
+display: inline-flex;
+align-items: center;
+gap: 6px;
+font: 600 11px/1 var(--font-b);
+letter-spacing: 0.05em;
+text-transform: uppercase;
+color: #fff;
+}
+.dept-cover-wrap .card-stats .stat .b {
+width: 24px;
+height: 24px;
+font-size: 11px;
+border-radius: 3px;
+border: 1.5px solid rgba(255, 255, 255, 0.85);
+color: #fff;
+font-weight: 700;
+display: inline-grid;
+place-items: center;
+background: rgba(0, 0, 0, 0.25);
+}
 .dept-title {
 font: 700 22px/1.2 var(--font-h);
 margin: 8px 0 10px;
 }
+.dept-cover-wrap .dept-title { margin: 0 0 8px; }
 .dept-title a { color: inherit; text-decoration: none; }
-.dept-title a:hover { color: var(--accent); }
+.dept-cover-wrap .dept-title a { color: #fff; }
+.dept-cover-wrap .dept-title a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .dept-desc {
-font: 400 13px/1.5 var(--font-h);
+font: 400 14px/1.55 var(--font-b);
 max-width: 60ch;
 margin-bottom: 16px;
+}
+.dept-cover-wrap .dept-desc {
+color: rgba(255, 255, 255, 0.85);
+margin-bottom: 0;
+}
+.dept-cover-wrap .dept-title,
+.dept-cover-wrap .dept-desc,
+.dept-cover-wrap .dept-cover-head .fac {
+text-shadow: 0 1px 4px rgba(0, 0, 0, 0.55);
 }
 .dept-select-row {
 display: flex;

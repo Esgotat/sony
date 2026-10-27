@@ -226,17 +226,25 @@ ${licBadgeHTML(p)}
 function deptDetailHTML(d) {
     const s = deptStats(d.n);
     const creator = d.createdBy != null ? esc(d.creatorName || ('пользователь №' + d.createdBy)) : 'база университета';
+    const deptCover = d.photo
+        ? '<img class="dept-cover-img" src="' + esc(d.photo) + '" alt="Фото кафедры">'
+        : ((window.OU_icons && OU_icons.deptIconHTML) ? '<div class="dept-cover-gen">' + OU_icons.deptIconHTML(d) + '</div>' : '');
     return `
-<div>
-<div class="dept-emoji">${d.photo ? '<img class="dept-photo" src="' + esc(d.photo) + '" alt="Фото кафедры">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(d) : '')}</div>
+<div class="dept-cover-wrap">
+${deptCover}
+<div class="dept-cover-shade"></div>
+<div class="dept-cover-text">
+<div class="dept-cover-head">
 <span class="fac">${esc(d.f)}</span>
-<h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
-<p class="dept-desc">${esc(d.x || '')}</p>
 <div class="card-stats">
 <span class="stat"><i class="b b-d">Д</i>${s.d}</span>
 <span class="stat"><i class="b b-k">К</i>${s.k}</span>
 <span class="stat"><i class="b b-a">А</i>${s.a}</span>
 <span class="stat"><i class="b b-ch">Ч</i>${s.ch}</span>
+</div>
+</div>
+<h2 class="dept-title"><a href="dept.html?id=${d.n}">${esc(d.t)}</a></h2>
+<p class="dept-desc">${esc(d.x || '')}</p>
 </div>
 </div>
 <div>
