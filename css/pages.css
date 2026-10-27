@@ -619,21 +619,26 @@ box-shadow:
 inset 0 0 0 1px rgba(33, 31, 26, 0.28),
 0 18px 34px rgba(33, 31, 26, 0.34);
 }
-/* корешок: цвет СТАТУСА проверки публикации (тот же фон, что у плашки
-   статуса: st-wait / st-ok / st-fix / st-no) + блик и тиснёная линия.
-   Класс статуса навешивается на карточку в pubCard() (js/app.js).
-   --spine-color подставляется из правил статусов ниже; если по какой-то
-   причине он пуст — запасной вариант «на проверке» (--bch). */
+/* корешок: ЯРКИЙ цвет СТАТУСА проверки публикации (st-wait / st-ok /
+   st-fix / st-no) + блик и тиснёная линия.
+   Базовый тон статуса берётся из той же темы, что и фон плашки статуса
+   (--bk/--bch/--ba/--bd), но усиливается до насыщенного «красочного»
+   оттенка: color-mix подмешивает чистый хроматический акцент статуса и
+   поднимает светимость. Если color-mix не поддерживается — корректно
+   откатываемся к обычному цвету статуса (первое объявление ниже).
+   Класс статуса навешивается на карточку в pubCard() (js/app.js). */
 .card.pub-card .pub-cover .pub-spine {
 position: absolute;
 top: 0;
 bottom: 0;
 left: 0;
-width: 13px;
+width: 14px;
 z-index: 3;
-background: linear-gradient(90deg, rgba(0, 0, 0, 0.55) 0%, rgba(0, 0, 0, 0.18) 55%, rgba(255, 255, 255, 0.16) 100%),
+background: linear-gradient(90deg, rgba(0, 0, 0, 0.38) 0%, rgba(0, 0, 0, 0.06) 45%, rgba(255, 255, 255, 0.30) 78%, rgba(255, 255, 255, 0.10) 100%),
 var(--spine-color, var(--bch, var(--ink)));
-border-right: 1px solid rgba(255, 255, 255, 0.22);
+box-shadow: inset -1px 0 0 rgba(33, 31, 26, 0.35),
+1px 0 4px rgba(33, 31, 26, 0.30);
+border-right: 1px solid rgba(255, 255, 255, 0.35);
 pointer-events: none;
 }
 /* корешок наследует цвет статуса проверки публикации */
@@ -641,6 +646,14 @@ pointer-events: none;
 .card.pub-card.st-wait { --spine-color: var(--bch); }
 .card.pub-card.st-no   { --spine-color: var(--bd); }
 .card.pub-card.st-fix  { --spine-color: var(--ba); }
+/* тот же цвет статуса, но заметно ярче и насыщеннее: подмешиваем
+   чистый хроматический акцент статуса к базовому тону темы */
+@supports (color: color-mix(in oklab, red, blue)) {
+.card.pub-card.st-ok   { --spine-color: color-mix(in oklab, var(--bk) 55%, #16C60C); }
+.card.pub-card.st-wait { --spine-color: color-mix(in oklab, var(--bch) 50%, #FFB300); }
+.card.pub-card.st-fix  { --spine-color: color-mix(in oklab, var(--ba) 50%, #00A6FB); }
+.card.pub-card.st-no   { --spine-color: color-mix(in oklab, var(--bd) 55%, #FF2D2D); }
+}
 .card.pub-card .pub-cover .pub-dept {
 font: 700 9px/1.4 var(--font-m);
 letter-spacing: 0.12em;
