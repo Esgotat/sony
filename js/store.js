@@ -126,7 +126,13 @@ const CloudSync = {
     try {
       const cloud = await FBApi.get('/state');
       if (!cloud || typeof cloud !== 'object' || Array.isArray(cloud)) return;
-      this.writeAll(applyMessageDeletes(applyUserDeletes(mergeState(this.readLocal(), cloud))));
+      /* для общих списков (пользователи, кафедры и их фото/аватарки) облако — источник истины:
+         локальный кэш этого браузера не должен перетирать данные других пользователей */
+      const merged = mergeState(this.readLocal(), cloud);
+      ['ou_users', 'ou_departments', 'ou_people_overrides'].forEach((k) => {
+        if (cloud[k] !== undefined) merged[k] = cloud[k];
+      });
+      this.writeAll(applyMessageDeletes(applyUserDeletes(merged)));
       this.schedulePush();
     } catch (e) { /* офлайн */ }
   },
@@ -244,6 +250,21 @@ const LocalPeopleOvr = {
     patch._ts = _ts();
     const o = this._get();
     o[id] = Object.assign(o[id] || {}, patch);
+    /* фото профиля — общие данные: пишем их и в запись пользователя (ou_users),
+       которая синхронизируется через облако, чтобы аватарку видели другие пользователи.
+       ou_people_overrides при загрузке может перетираться локальным кэшем этого браузера,
+       поэтому одного его недостаточно для показа фото ДРУГИМ людям. */
+    if ('photo' in patch) {
+      try {
+        const ul = LocalUsers.list();
+        const ui = ul.findIndex((u) => u.id === Number(id));
+        if (ui > -1) {
+          ul[ui].photo = patch.photo;
+          ul[ui]._ts = _ts();
+          localStorage.setItem(LocalUsers.KEY, JSON.stringify(ul));
+        }
+      } catch (e) {}
+    }
     localStorage.setItem(this.KEY, JSON.stringify(o));
   }
 };
