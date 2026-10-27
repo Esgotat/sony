@@ -511,7 +511,10 @@ display: flex;
 flex-direction: column;
 gap: 6px;
 padding: 14px 16px 12px 22px;
-color: var(--ink);
+/* фиксированные цвета «бумаги»: страничка всегда светлая, поэтому её
+   текст не зависит от темы (в тёмных темах var(--ink) — почти белый и
+   на кремовом листе был нечитаем) */
+color: #211F1A;
 z-index: 1;
 }
 /* «ступеньки» листов у правого края страничек */
@@ -538,7 +541,7 @@ padding-bottom: 8px;
 font: 700 9px/1 var(--font-m);
 letter-spacing: 0.14em;
 text-transform: uppercase;
-color: var(--muted);
+color: #6E6759; /* фиксированный «бумажный» серый — читаем на светлом листе в любой теме */
 }
 .pub-pages .card-title {
 font: 600 13px/1.35 var(--font-h);
@@ -549,7 +552,7 @@ display: -webkit-box;
 -webkit-box-orient: vertical;
 overflow: hidden;
 }
-.pub-pages .pub-authors { font-size: 11px; color: var(--ink); padding: 0; }
+.pub-pages .pub-authors { font-size: 11px; color: #211F1A; padding: 0; }
 .pub-page-foot {
 margin-top: auto;
 display: flex;
@@ -557,7 +560,7 @@ justify-content: space-between;
 align-items: center;
 gap: 8px;
 }
-.pub-pages .pub-venue { font-size: 10px; color: var(--muted); padding: 0; }
+.pub-pages .pub-venue { font-size: 10px; color: #6E6759; padding: 0; }
 /* номер страницы — имитация набора точек с цифрой */
 .pub-page-foot .page-no {
 flex: none;
@@ -683,10 +686,20 @@ padding: 12px 16px 0 24px;
 }
 .card.pub-card .pub-cover .pub-cover-text .card-title,
 .card.pub-card .pub-cover .pub-cover-text .pub-dept { color: #fff; }
+/* текст на обложке всегда белый (под ним затемнение), поэтому плашки
+   лицензий и статусов — полупрозрачные БЕЛЫЕ, а не цвета темы: иначе в
+   темах со светлыми акцентами («Тиффани», «Изумруд») тёмный текст
+   лицензии становился нечитаемым */
 .card.pub-card .pub-cover .pub-cover-text .lic-badge {
 background: rgba(255, 255, 255, 0.14);
 border-color: rgba(255, 255, 255, 0.35);
 color: #fff;
+}
+.card.pub-card .pub-cover .pub-cover-text .status {
+background: rgba(255, 255, 255, 0.18);
+border: 1px solid rgba(255, 255, 255, 0.45);
+color: #fff;
+text-shadow: none;
 }
 .card.pub-card .pub-cover .pub-cover-text h3.card-title {
 /* -webkit-box + line-clamp НЕ используем: вместе с overflow:hidden он ломал

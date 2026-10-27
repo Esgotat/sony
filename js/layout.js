@@ -71,7 +71,37 @@ function buildPalette(hex) {
     };
 }
 
-const CUSTOM_VARS = ['--bg','--bg-2','--ink','--muted','--line','--line-2','--dark','--paper','--accent','--bd','--bk','--ba','--bch'];
+const CUSTOM_VARS = ['--bg','--bg-2','--ink','--muted','--line','--line-2','--dark','--paper','--accent','--bd','--bk','--ba','--bch','--st-fg'];
+
+/* ---------- ЧИТАЕМОСТЬ ТЕКСТА НА ЦВЕТНЫХ ПЛАШКАХ (темы) ----------
+   Белые надписи статусов/лицензий на светлых плашках темы становятся
+   нечитаемыми. Подбираем цвет текста (#FFF или --ink) по контрасту
+   WCAG и кладём его в переменную --st-fg; CSS использует её с запасом
+   #FFF, поэтому на дефолтной теме ничего не меняется. */
+function wcagLum(r, g, b) {
+    const f = (v) => { v /= 255; return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4); };
+    return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b);
+}
+function contrastRatio(rgb1, rgb2) {
+    const L1 = wcagLum(rgb1[0], rgb1[1], rgb1[2]);
+    const L2 = wcagLum(rgb2[0], rgb2[1], rgb2[2]);
+    return (Math.max(L1, L2) + 0.05) / (Math.min(L1, L2) + 0.05);
+}
+function applyStatusFg(pal) {
+    /* читаем уже применённые значения: для custom-палитры они инлайновые,
+       для встроенных тем — из THEME_PALETTES (pal), для default — из CSS */
+    const cs = getComputedStyle(document.documentElement);
+    const ink = hexToRgb(pal && pal['--ink'] || cs.getPropertyValue('--ink').trim() || '#211F1A');
+    const keys = ['--bd', '--bk', '--ba', '--bch', '--adm'];
+    let worst = Infinity;
+    keys.forEach((k) => {
+        const raw = (pal && pal[k]) || cs.getPropertyValue(k).trim();
+        if (!/^#[0-9a-f]{6}$/i.test(raw)) return;
+        const c = hexToRgb(raw);
+        worst = Math.min(worst, contrastRatio([255, 255, 255], c), contrastRatio(ink, c));
+    });
+    if (worst !== Infinity) document.documentElement.style.setProperty('--st-fg', worst >= 4.5 ? '#FFF' : rgbToHex(ink[0], ink[1], ink[2]));
+}
 /* Палитры встроенных тем. Каждой теме соответствует полный набор переменных,
    поэтому переключение любой темы работает даже без загруженного CSS-правила. */
 const THEME_PALETTES = {
@@ -116,6 +146,7 @@ function applyTheme(id, color) {
         pal['--adm'] = hslToHex((rgbToHsl.apply(null, hexToRgb(color)).h + 0.85) % 1, 0.55, 0.42);
         CUSTOM_VARS.concat(['--adm']).forEach((v) => { if (pal[v]) root.style.setProperty(v, pal[v]); });
         root.setAttribute('data-theme', 'custom');
+        applyStatusFg(pal);
     } else if (THEME_PALETTES[id]) {
         /* применяем палитру темы напрямую через inline-переменные —
            так тема гарантированно работает независимо от загрузки CSS */
@@ -123,8 +154,10 @@ function applyTheme(id, color) {
         Object.keys(pal).forEach((v) => root.style.setProperty(v, pal[v]));
         root.setAttribute('data-theme', id);
         if (DARK_THEMES.indexOf(id) !== -1) root.setAttribute('data-dark', '');
+        applyStatusFg(pal);
     } else {
         root.removeAttribute('data-theme');
+        applyStatusFg(null);
     }
 }
 function themePref() {
