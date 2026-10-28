@@ -670,7 +670,7 @@ function deptCardHTML(c) {
   const s = deptStats(c.n);
   const val = (v) => (v == null ? '—' : v);
   return `
-  <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
+  <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
@@ -690,7 +690,7 @@ function deptCardHTML(c) {
     function deptsHTML() {
         const list = (Store.depts || []).filter((d) => !d.tpl).sort((a, b) => a.n - b.n);
         if (!list.length) return '<h2 class="sub-title">Кафедры</h2><div class="empty">Кафедр пока нет.</div>';
-        return '<h2 class="sub-title">Кафедры</h2><section class="cards">' + list.map(deptCardHTML).join('') + '</section>';
+        return '<h2 class="sub-title">Кафедры</h2><section class="cards cards-depts">' + list.map(deptCardHTML).join('') + '</section>';
     }
 
     $('#homeDepts').innerHTML = deptsHTML();
