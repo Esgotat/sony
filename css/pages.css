@@ -1491,14 +1491,17 @@ color: rgba(255, 255, 255, 0.6);
   flex-direction: row;
   align-items: stretch;
   min-height: 0;
-  height: 132px;
+  /* высота подобрана так, чтобы ВЕСЬ текст (факультет, название,
+     описание и строка Д/К/А/Ч) помещался без обрезки */
+  height: auto;
+  min-height: 246px;
   gap: 0;
 }
 /* аватарка кафедры — от верхнего края карточки до нижнего,
    лишнее обрезается (object-fit: cover) */
 #cards .card.dept-card .card-emoji {
-  width: 132px;
-  min-width: 132px;
+  width: 176px;
+  min-width: 176px;
   height: 100%;
   align-self: stretch;
   flex: none;
@@ -1531,27 +1534,56 @@ color: rgba(255, 255, 255, 0.6);
 #cards .card.dept-card .card-bottom {
   flex: 1;
   min-width: 0;
-  justify-content: center;
-  gap: 8px;
-  padding: 12px 16px 12px 14px;
+  /* текст прижат к левому краю — так его больше видно */
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: left;
+  gap: 6px;
+  padding: 14px 12px 14px 12px;
+}
+/* факультет над названием — тоже слева, не по центру */
+#cards .card.dept-card .card-bottom .fac {
+  text-align: left;
+  align-self: flex-start;
 }
 #cards .card.dept-card .card-title {
   font-size: 16px;
   line-height: 1.25;
+  text-align: left;
+  align-self: flex-start;
 }
 #cards .card.dept-card .dept-desc {
   margin: 0;
-  font: 400 13px/1.5 var(--font-b);
+  font: 400 12.5px/1.45 var(--font-b);
   color: var(--muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  text-align: left;
+  align-self: stretch;
+  /* описание показывается целиком (без обрезки в N строк) */
+  display: block;
+  overflow: visible;
+}
+/* строка Д/К/А/Ч — влево и компактная, чтобы весь текст помещался */
+#cards .card.dept-card .card-stats {
+  justify-content: flex-start;
+  gap: 2px;
+  margin-top: 2px;
+  padding-top: 8px;
+  align-self: stretch;
+}
+#cards .card.dept-card .stat {
+  font-size: 13px;
+  padding: 3px 6px;
+  gap: 4px;
+}
+#cards .card.dept-card .stat .b {
+  width: 22px;
+  height: 22px;
+  font-size: 11px;
 }
 @media (max-width: 560px) {
   #cards .card.dept-card { flex-direction: column; height: auto; }
-  #cards .card.dept-card .card-emoji { width: 100%; min-width: 0; height: 140px; }
-  #cards .card.dept-card .card-bottom { padding: 12px 16px 16px; }
+  #cards .card.dept-card .card-emoji { width: 100%; min-width: 0; height: 160px; }
+  #cards .card.dept-card .card-bottom { padding: 12px 14px 16px; }
 }
 
 /* ============================================================
@@ -1568,16 +1600,19 @@ body[data-page="kafedry"] .cards-depts .card.dept-card,
   flex-direction: row;
   align-items: stretch;
   gap: 0;
-  min-height: 158px;
+  /* выше, чтобы весь текст карточки был виден целиком */
+  min-height: 246px;
   height: 100%;
   padding: 0;
   border-radius: 16px;
+  /* полупрозрачная рамка поверх «стеклянного» фона */
   border: 1px solid rgba(255, 255, 255, 0.55);
-  /* полупрозрачное «стекло» + тень */
+  /* ПОЛУПРОЗРАЧНЫЙ фон: просвечивает и страница под карточкой,
+     и тонированная подложка цвета факультета (::before) */
   background: linear-gradient(135deg,
       rgba(255, 255, 255, 0.38) 0%,
       rgba(255, 255, 255, 0.16) 55%,
-      rgba(255, 255, 255, 0.28) 100%);
+      rgba(255, 255, 255, 0.28) 100%) !important;
   -webkit-backdrop-filter: blur(14px) saturate(150%);
   backdrop-filter: blur(14px) saturate(150%);
   box-shadow:
@@ -1614,9 +1649,11 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .card-emoji,
 .home-block .cards-depts .card.dept-card .card-emoji {
   position: relative;
   z-index: 1;
-  width: 148px;
-  min-width: 148px;
-  height: auto;
+  /* ширина полосы фиксирована, высота — вся карточка:
+     фото обрезается по форме (object-fit: cover) */
+  width: 176px;
+  min-width: 176px;
+  max-width: 176px;
   flex: none;
   display: block;
   padding: 0;
@@ -1645,31 +1682,41 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .card-emoji .dept-ic,
   place-items: center;
   background: color-mix(in srgb, var(--stripe, var(--line-2)) 14%, rgba(255, 255, 255, 0.25));
 }
-/* правая часть визитки: название, факультет, описание / статистика */
+  /* правая часть визитки: текст прижат к левому краю, показывается целиком */
 body[data-page="kafedry"] .cards-depts .card.dept-card .card-bottom,
 .home-block .cards-depts .card.dept-card .card-bottom {
   position: relative;
   z-index: 1;
   flex: 1;
   min-width: 0;
-  justify-content: center;
+  justify-content: flex-start;
+  align-items: flex-start;
+  text-align: left;
   gap: 6px;
-  padding: 16px 18px 16px 16px;
+  padding: 16px 14px 16px 14px;
+}
+body[data-page="kafedry"] .cards-depts .card.dept-card .card-bottom .fac,
+.home-block .cards-depts .card.dept-card .card-bottom .fac {
+  text-align: left;
+  align-self: flex-start;
 }
 body[data-page="kafedry"] .cards-depts .card.dept-card .card-title,
 .home-block .cards-depts .card.dept-card .card-title {
   font-size: 16px;
   line-height: 1.25;
+  text-align: left;
+  align-self: flex-start;
 }
 body[data-page="kafedry"] .cards-depts .card.dept-card .dept-desc,
 .home-block .cards-depts .card.dept-card .dept-desc {
   margin: 0;
   font: 400 12.5px/1.45 var(--font-b);
   color: var(--muted);
-  display: -webkit-box;
-  -webkit-line-clamp: 3;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
+  text-align: left;
+  align-self: stretch;
+  /* описание без обрезки — видно весь текст */
+  display: block;
+  overflow: visible;
 }
 /* компактная строка Д/К/А/Ч на главной */
 .home-block .cards-depts .card.dept-card .card-stats {
@@ -1691,11 +1738,13 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .dept-desc,
   .cards-depts { grid-template-columns: 1fr; }
   body[data-page="kafedry"] .cards-depts .card.dept-card,
   .home-block .cards-depts .card.dept-card {
-    min-height: 140px;
+    min-height: 0;
+    height: auto;
   }
   body[data-page="kafedry"] .cards-depts .card.dept-card .card-emoji,
   .home-block .cards-depts .card.dept-card .card-emoji {
-    width: 110px;
-    min-width: 110px;
+    width: 132px;
+    min-width: 132px;
+    max-width: 132px;
   }
 }
