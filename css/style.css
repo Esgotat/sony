@@ -50,7 +50,6 @@ background: transparent;
 .b-rev { background: var(--bd); color: #FFF; }
 .b-sup { background: var(--ba); color: #FFF; }
 .b-trn { background: #3E6C8E; color: #FFF; }
-.b-adm { background: var(--adm); color: #FFF; }
 
 /* ---------- ШАПКА ---------- */
 .hd {
@@ -182,7 +181,6 @@ transition: color 0.2s ease;
 .hd-dd:hover > .hd-dd-menu, .hd-dd:focus-within > .hd-dd-menu { display: none; }
 .hd-dd.open:hover > .hd-dd-menu { display: block; }
 }
-.caret { font-size: 9px; color: var(--muted); margin-left: 3px; }
 .dd-menu {
 position: absolute;
 top: 100%; left: 0;
@@ -428,7 +426,6 @@ place-items: center;
 .stat .b.b-rev { background: var(--bd); color: #FFF; }
 .stat .b.b-sup { background: var(--ba); color: #FFF; }
 .stat .b.b-trn { background: #3E6C8E; color: #FFF; }
-.stat .b.b-adm { background: var(--adm, #6B2D5C); color: #FFF; }
 .card-title { font: 600 13px/1.35 var(--font-h); }
 .card-title a { text-decoration: none; color: inherit; transition: color 0.15s ease; }
 .card-title a:hover { color: var(--accent); }
@@ -559,13 +556,6 @@ border-bottom: 1px solid var(--line);
 display: flex;
 align-items: baseline;
 gap: 12px;
-}
-.sub-title-note {
-font: 500 11px/1 var(--font-m);
-letter-spacing: 0.1em;
-text-transform: uppercase;
-color: var(--muted);
-font-weight: 400;
 }
 
 /* ---------- КАРТОЧКИ ЛЮДЕЙ ---------- */
@@ -763,8 +753,6 @@ font-size: 10px;
 letter-spacing: 0.03em;
 white-space: nowrap;
 }
-.dd .caret { transition: transform 0.2s ease; margin-left: 6px; }
-.dd.open > .dd-btn .caret { transform: rotate(180deg); }
 /* выпадашка — поверх контента (не в потоке), открывается только тапом */
 .dd-menu {
 position: absolute;
@@ -794,7 +782,6 @@ font-size: 11px;
 border-bottom: 1px solid var(--line);
 }
 .dd-menu a:last-child { border-bottom: none; }
-.hd-dd.open > .hd-dd-btn .caret { transform: rotate(180deg); }
 .hd-dd:hover > .hd-dd-menu, .hd-dd:focus-within > .hd-dd-menu { display: none !important; }
 .hd-dd.open > .hd-dd-menu { display: block !important; }
 .page-title { font-size: 22px; }
