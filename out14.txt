@@ -1,2 +1,0 @@
-PHONE TAP: {"s1":{"url":"http://localhost:8099/index.html","open":true},"s2":"http://localhost:8099/publications.html"}
-DESKTOP: {"hov":"block","navUrl":"http://localhost:8099/index.html"}

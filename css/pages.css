@@ -219,22 +219,9 @@ grid-template-columns: 1.2fr 0.8fr;
 gap: 32px;
 border-radius: 6px;
 }
-.dept-emoji {
-width: 72px;
-height: 72px;
-border: 1px solid var(--line);
-background: var(--bg-2);
-display: grid;
-place-items: center;
-font-size: 36px;
-margin-bottom: 14px;
-border-radius: 6px;
-color: var(--ink);
-}
 /* SVG-иконки кафедр (вместо эмодзи) */
 .dept-ic { display: inline-flex; align-items: center; justify-content: center; color: var(--ink); }
 .dept-ic .ou-ic, svg.ou-ic { width: 56px; height: 56px; display: block; }
-.dept-emoji .dept-ic .ou-ic { width: 44px; height: 44px; }
 .avatar-svg { display: block; border-radius: 50%; }
 .card.person-card .card-emoji .avatar-svg:not(.avatar-square) { width: 96px; height: 96px; filter: drop-shadow(0 2px 6px rgba(0,0,0,.18)); }
 
@@ -286,14 +273,6 @@ width: auto;
 height: auto;
 display: block;
 object-fit: contain;
-}
-.dept-emoji .dept-photo {
-width: 100%;
-height: auto;
-max-height: 100%;
-aspect-ratio: 1 / 1;
-object-fit: cover;
-border-radius: 6px;
 }
 /* на карточке кафедры фото занимает всё выделенное место (без овала) */
 .card .card-emoji .dept-photo.avatar-svg {
@@ -1506,3 +1485,54 @@ color: rgba(255, 255, 255, 0.6);
 }
 /* кнопка «Скачать в PDF» */
 .file-btn.pdf-dl[disabled] { opacity: 0.6; cursor: progress; }
+
+/* ---------- КАФЕДРЫ: карточка с описанием справа от аватарки ---------- */
+#cards .card.dept-card {
+  flex-direction: row;
+  align-items: stretch;
+  min-height: 0;
+  gap: 0;
+}
+#cards .card.dept-card .card-emoji {
+  width: 150px;
+  min-width: 150px;
+  height: auto;
+  flex: none;
+  display: grid;
+  place-items: center;
+  padding: 16px 10px;
+  background: color-mix(in srgb, var(--stripe, var(--line-2)) 8%, transparent);
+}
+#cards .card.dept-card .card-emoji svg,
+#cards .card.dept-card .card-emoji img.dept-photo,
+#cards .card.dept-card .card-emoji .dept-photo.avatar-svg {
+  width: 104px;
+  height: 104px;
+  max-width: 104px;
+  max-height: 104px;
+}
+#cards .card.dept-card .card-bottom {
+  flex: 1;
+  min-width: 0;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 18px 16px 4px;
+}
+#cards .card.dept-card .card-title {
+  font-size: 16px;
+  line-height: 1.25;
+}
+#cards .card.dept-card .dept-desc {
+  margin: 0;
+  font: 400 13px/1.5 var(--font-b);
+  color: var(--muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+@media (max-width: 560px) {
+  #cards .card.dept-card { flex-direction: column; }
+  #cards .card.dept-card .card-emoji { width: 100%; min-width: 0; height: 140px; }
+  #cards .card.dept-card .card-bottom { padding: 12px 16px 16px; }
+}

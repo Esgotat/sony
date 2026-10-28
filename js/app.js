@@ -6,7 +6,6 @@ OPEN UNIVERSITY · ЛОГИКА ВСЕХ СТРАНИЦ
 (function () {
 'use strict';
 const $ = (s) => document.querySelector(s);
-const $$ = (s) => document.querySelectorAll(s);
 const REDUCED = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const params = new URLSearchParams(location.search);
 const searchEl = () => document.getElementById('siteSearch');
@@ -2486,22 +2485,16 @@ function initKafedry() {
     };
 
 function cardHTML(c) {
-  const s = deptStats(c.n);
-  const val = (v) => (v == null ? '—' : v);
+  const desc = (c.x || '').trim();
   return `
-  <a class="card card-link" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}" title="${esc(c.x || '')}">
+  <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}">
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
       <h3 class="card-title">${esc(c.t)}</h3>
-      <div class="card-stats">
-        <span class="stat"><span class="b b-d">Д</span>${val(s.d)}</span>
-        <span class="stat"><span class="b b-k">К</span>${val(s.k)}</span>
-        <span class="stat"><span class="b b-a">А</span>${val(s.a)}</span>
-        <span class="stat"><span class="b b-ch">Ч</span>${val(s.ch)}</span>
-      </div>
+      ${desc ? '<p class="dept-desc">' + esc(desc) + '</p>' : ''}
     </div>
   </a>`;
 }

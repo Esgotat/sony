@@ -1,3 +1,0 @@
-PHONE TAP: {"s1":{"url":"http://localhost:8099/profile.html?id=711","open":true},"s2":"/publications.html"}
-PHONE LOGOUT: {"lo":false,"after":{"path":"/profile.html","sess":"711"}}
-DESKTOP: {"hov":"block","navUrl":"/profile.html?id=712","deskLogout":false}

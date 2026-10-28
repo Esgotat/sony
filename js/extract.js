@@ -159,7 +159,6 @@ async function extractPdf(bytes) {
     function applyCmap(text, font) {
         if (!font || !cmapByFont[font]) return text;
         var mp = cmapByFont[font];
-        var conv = function (ch) { var c = ch.charCodeAt(0); return mp[c] != null ? String.fromCharCode(mp[c]) : ch; };
         return text.replace(/[\u0000-\u00FF]/g, function (ch) {
             var c = ch.charCodeAt(0);
             return mp[c] != null ? String.fromCharCode(mp[c]) : ch;
