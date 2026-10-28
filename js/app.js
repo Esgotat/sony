@@ -2486,6 +2486,7 @@ function initKafedry() {
 
 function cardHTML(c) {
   const desc = (c.x || '').trim();
+  const s = deptStats(c.n);
   return `
   <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}">
     <div class="card-emoji" aria-hidden="true">
@@ -2494,13 +2495,19 @@ function cardHTML(c) {
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
       <h3 class="card-title">${esc(c.t)}</h3>
-      ${desc ? '<p class="dept-desc">' + esc(desc) + '</p>' : ''}
+      ${desc ? '<p class="dept-desc">' + esc(desc) + '</p>' : '<p class="dept-desc dept-desc-empty">Описание кафедры пока не заполнено.</p>'}
+    </div>
+    <div class="card-stats dept-dkach" aria-label="Состав кафедры">
+      <span class="stat"><i class="b b-d">Д</i>${s.d}</span>
+      <span class="stat"><i class="b b-k">К</i>${s.k}</span>
+      <span class="stat"><i class="b b-a">А</i>${s.a}</span>
+      <span class="stat"><i class="b b-ch">Ч</i>${s.ch}</span>
     </div>
   </a>`;
 }
 
     function render() {
-        let list = Store.depts.filter((c) => state.fac === 'Все' || c.f === state.fac);
+        let list = Store.depts.filter((c) => !c.tpl && (state.fac === 'Все' || c.f === state.fac));
         list.sort((a, b) => a.n - b.n);
         $('#cards').innerHTML = list.map(cardHTML).join('');
         stagger($('#cards').querySelectorAll('.card'));
