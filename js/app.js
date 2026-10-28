@@ -16,6 +16,7 @@ let DEPT_BY_N = {};
 const esc = (s) => String(s == null ? '' : s)
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+window.OU_esc = esc;   /* для js/extract.js (рендер первой страницы файла) */
 
     function shortenName(name, maxLen = 28) {
   if (!name || name.length <= maxLen) return name;
@@ -70,6 +71,16 @@ function buildFilters(items, current, onPick) {
 
 const initialsOf = (name) => name.split(' ').map((w) => w[0]).slice(0, 2).join('');
 const matches = (q, ...fields) => fields.join(' ').toLowerCase().includes(q);
+window.matches = matches;   /* для OU_extract (поиск по полному тексту файла) */
+/* фрагмент вычитанного текста вокруг найденного слова — для подсказки поиска */
+function textSnippet(p, q) {
+    const t = (window.OU_extract && OU_extract.pubTextOf(p)) || '';
+    if (!t || !q) return '';
+    const i = t.toLowerCase().indexOf(q);
+    if (i < 0) return '';
+    const from = Math.max(0, i - 40), to = Math.min(t.length, i + q.length + 80);
+    return (from > 0 ? '…' : '') + t.slice(from, to).trim() + (to < t.length ? '…' : '');
+}
 const nextPubId = () => Math.max(0, ...(Store.pubs || []).map((p) => p.id)) + 1;
 const sortPubs = (list) => list.slice().sort((a, b) => b.year - a.year || a.id - b.id);
 const pubsOf = (person) => person.short
@@ -198,7 +209,56 @@ function licBadgeHTML(p) {
 /* Обложка публикации: картинка (фото/автор работы) тянется от верха до низа
    секции, а текст (год, статус, название, авторы, издание) лежит поверх неё
    на затемнении. */
+/* Обложка публикации: если к работе прикреплён файл — на обложке показывается
+   ПЕРВАЯ СТРАНИЦА (PDF — через встроенный просмотрщик браузера, Word —
+   сгенерированная титульная страница из canvas). Иначе — картинка автора
+   или сгенерированный паттерн. */
+function pubFileKind(p) {
+    const n = String(p.fileName || p.file || '').toLowerCase();
+    if (p.fileData || p.hasFile || p.file) {
+        if (/\.pdf$/.test(n) || /pdf/i.test(String(p.fileType || ''))) return 'pdf';
+        if (/\.docx?$/.test(n)) return 'word';
+    }
+    return '';
+}
+const pdfFrameCache = {};
+function pdfFrameSrc(dataUrl) {
+    if (!pdfFrameCache[dataUrl]) {
+        try {
+            var comma = dataUrl.indexOf(',');
+            var bin = atob(dataUrl.slice(comma + 1));
+            var bytes = new Uint8Array(bin.length);
+            for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            pdfFrameCache[dataUrl] = URL.createObjectURL(new Blob([bytes], { type: 'application/pdf' }));
+        } catch (e) { return dataUrl; }
+    }
+    return pdfFrameCache[dataUrl];
+}
+function pubFirstPageHTML(p) {
+    const kind = pubFileKind(p);
+    if (!kind) return null;
+    if (kind === 'pdf') {
+        /* локальный PDF: первая страница видна сразу, прокрутка запрещена */
+        if (p.fileData && /^data:application\/pdf/i.test(p.fileData)) {
+            return '<iframe class="pub-cover-pdf" src="' + pdfFrameSrc(p.fileData) + '#toolbar=0&navpanes=0&scrollbar=0&view=FitH" ' +
+                'tabindex="-1" loading="lazy" aria-hidden="true" scrolling="no" title="Первая страница работы"></iframe>';
+        }
+        /* облачный/базовый PDF: картинка первой страницы либо ссылка на файл */
+        if (p.firstPageImg) return '<img class="pub-cover-img" src="' + esc(p.firstPageImg) + '" alt="">';
+        if (p.file) return '<embed class="pub-cover-pdf" src="' + esc(p.file) + '#toolbar=0&navpanes=0&scrollbar=0" tabindex="-1">';
+        return '<span class="pub-firstpage-hint">PDF</span>';
+    }
+    /* Word: титульная страница генерируется из вычитанного текста */
+    if (p.firstPageImg) return '<img class="pub-cover-img" src="' + esc(p.firstPageImg) + '" alt="">';
+    if (window.OU_extract && OU_extract.docTitlePNG) {
+        const uri = OU_extract.docTitlePNG(p);
+        if (uri) return '<img class="pub-cover-img" src="' + uri + '" alt="">';
+    }
+    return '<span class="pub-firstpage-hint">WORD</span>';
+}
 function pubCoverImgHTML(p) {
+    const fp = pubFirstPageHTML(p);
+    if (fp) return fp;
     if (p.photo) return '<img class="pub-cover-img" src="' + esc(p.photo) + '" alt="">';
     const firstAuthor = personByShort((p.authors || '').split(',')[0].trim());
     if (firstAuthor && firstAuthor.photo) return '<img class="pub-cover-img" src="' + esc(firstAuthor.photo) + '" alt="">';
@@ -317,6 +377,47 @@ function fileButtonHTML(p, key) {
     if (p.file) return '<a class="file-btn" href="' + esc(p.file) + '" target="_blank" rel="noopener">Открыть файл работы ↓</a>';
     return '';
 }
+/* скачать работу в PDF: оригинал-PDF отдаётся как есть, Word или работа без
+   файла пересобираются в PDF на лету из сохранённых данных и вычитанного текста */
+function pdfDownloadName(p) {
+    var base = String(p.fileName || p.title || 'work').replace(/\.(pdf|docx?|doc)$/i, '').replace(/[^\wА-Яа-яЁё \-]/g, '').trim().slice(0, 80);
+    return (base || 'work') + '.pdf';
+}
+function pdfBtnHTML(p) {
+    return '<button class="file-btn pdf-dl" type="button" data-pubid="' + p.id + '">Скачать в PDF ↓</button>';
+}
+async function downloadPubPdf(id) {
+    const EX = window.OU_extract;
+    const p = (Store.pubs || []).find((x) => String(x.id) === String(id));
+    if (!p) return;
+    const fname = pdfDownloadName(p);
+    /* если оригинал уже PDF — скачиваем его напрямую */
+    if (p.fileData && /\.pdf$/i.test(p.fileName || '')) {
+        const a = document.createElement('a'); a.href = p.fileData; a.download = fname;
+        document.body.appendChild(a); a.click(); a.remove(); return;
+    }
+    if (p.hasFile && /\.pdf$/i.test(p.fileName || '') && window.CloudFiles) {
+        const f = await CloudFiles.download('pub-' + p.id);
+        if (f && f.fileData) {
+            const a = document.createElement('a'); a.href = f.fileData; a.download = fname;
+            document.body.appendChild(a); a.click(); a.remove(); return;
+        }
+    }
+    if (!EX || !EX.workPdfDataUrl) { alert('Модуль обработки файлов не загружен.'); return; }
+    const uri = await EX.workPdfDataUrl(p);
+    if (!uri) { alert('Не удалось собрать PDF.'); return; }
+    const a = document.createElement('a'); a.href = uri; a.download = fname;
+    document.body.appendChild(a); a.click(); a.remove();
+}
+function bindPdfButtons(scope) {
+    (scope || document).querySelectorAll('.pdf-dl').forEach((b) => {
+        if (b.dataset.bound) return; b.dataset.bound = '1';
+        b.addEventListener('click', async () => {
+            const old = b.textContent; b.textContent = 'Готовлю PDF…'; b.disabled = true;
+            try { await downloadPubPdf(b.dataset.pubid); } finally { b.textContent = old; b.disabled = false; }
+        });
+    });
+}
 
 function bindAutocomplete(input, drop, candidates, isExcluded, onPick) {
     if (!input || !drop) return;
@@ -387,7 +488,7 @@ function checkReqCard(r) {
 <div class="rev-panel" id="revPanel-${r.id}" hidden>
 <h2 class="form-sub">Проверка работы</h2>
 <div class="rev-file">
-${fileButtonHTML(pub, 'pub-' + pub.id) || '<span class="file-hint">Файл не прикреплён.</span>'}
+${fileButtonHTML(pub, 'pub-' + pub.id) || '<span class="file-hint">Файл не прикреплён.</span>'} ${pdfBtnHTML(pub)}
 <a class="edit-btn" href="publication.html?id=${pub.id}">Страница работы</a>
 </div>
 <form class="pub-form rev-form" data-req="${r.id}">
@@ -502,7 +603,15 @@ function initSearch() {
         if (q.length < 2) { drop.hidden = true; return; }
         const depts = (Store.depts || []).filter((d) => !d.tpl && matches(q, d.t, d.f)).slice(0, 4);
         const people = (Store.people || []).filter((p) => matches(q, p.name, p.note || '')).slice(0, 4);
-        const pubs = (Store.pubs || []).filter((p) => matches(q, p.title, p.authors)).slice(0, 4);
+        /* поиск по публикациям: название/авторы + полный вычитанный текст файла */
+        const byText = (window.OU_extract && OU_extract.filterPubsByQuery)
+            ? OU_extract.filterPubsByQuery(Store.pubs || [], q)
+            : (Store.pubs || []).filter((p) => matches(q, p.title, p.authors));
+        const pubs = byText.slice(0, 4).map((p) => {
+            const sn = textSnippet(p, q);
+            return '<a class="sd-item" href="publication.html?id=' + p.id + '">' + esc(p.title) +
+                '<small>' + esc(sn ? sn : p.authors) + '</small></a>';
+        }).join('');
         if (!depts.length && !people.length && !pubs.length) {
             drop.innerHTML = '<div class="sd-none">Ничего не найдено.</div>';
         } else {
@@ -511,8 +620,7 @@ function initSearch() {
                     '<a class="sd-item" href="dept.html?id=' + d.n + '">' + esc(d.t) + '<small>' + esc(d.f) + '</small></a>').join('') : '') +
                 (people.length ? '<div class="sd-group">Люди</div>' + people.map((p) =>
                     '<a class="sd-item" href="profile.html?id=' + p.id + '">' + esc(p.name) + '<small>' + esc(p.note || '') + '</small></a>').join('') : '') +
-                (pubs.length ? '<div class="sd-group">Публикации</div>' + pubs.map((p) =>
-                    '<a class="sd-item" href="publication.html?id=' + p.id + '">' + esc(p.title) + '<small>' + esc(p.authors) + '</small></a>').join('') : '');
+                (pubs ? '<div class="sd-group">Публикации</div>' + pubs : '');
         }
         drop.hidden = false;
     }
@@ -1097,7 +1205,12 @@ function initAllPubs() {
     function render() {
         let list = sortPubs(Store.pubs);
         if (state.status !== 'Все') list = list.filter((p) => p.status === state.status);
-        if (q) list = list.filter((p) => matches(q, p.title, p.authors, p.venue || '', p.abstract || ''));
+        if (q) {
+            /* полный текст вычитанных файлов тоже участвует в поиске */
+            list = (window.OU_extract && OU_extract.filterPubsByQuery)
+                ? OU_extract.filterPubsByQuery(list, q)
+                : list.filter((p) => matches(q, p.title, p.authors, p.venue || '', p.abstract || ''));
+        }
         $('#cards').innerHTML = list.map(pubCard).join('');
         stagger($('#cards').querySelectorAll('.card'));
         $('#count').textContent = list.length + ' ' + plural(list.length, ['публикация', 'публикации', 'публикаций']) + (q ? ' по запросу «' + q + '»' : '');
@@ -1144,8 +1257,9 @@ function initPub() {
 <div class="dstat"><span>Издание</span><i class="dots"></i><b class="txt">${esc(p.venue)}</b></div>
 ${p.license && CCL[p.license] ? '<div class="dstat"><span>Лицензия</span><i class="dots"></i><b class="txt"><span class="lic-badge">' + esc(p.license) + '</span> <small class="lic-hint">' + esc(CCL[p.license].hint) + '</small></b></div>' : ''}
 </div>
-${fileButtonHTML(p, 'pub-' + p.id)}
+${fileButtonHTML(p, 'pub-' + p.id)} ${pdfBtnHTML(p)}
 </article>`;
+    bindPdfButtons(box);
 
     if (isOwnerPub) {
         $('#pubActions').hidden = false;
@@ -1358,13 +1472,36 @@ function initPubEdit() {
     }
     if (isEdit && (existing.fileData || existing.file)) $('#fileHint').textContent = 'Сейчас: ' + (existing.fileName || existing.file);
 
-    let pendingFile = null;
+    let pendingFile = null;      /* { fileData, fileName } */
+    let pendingExtract = null;   /* { text, firstPageImg } — результат вычитывания файла */
+    const EX = () => window.OU_extract;
+    async function processPendingFile() {
+        pendingExtract = null;
+        if (!pendingFile || !EX()) return;
+        $('#fileHint').textContent = 'Файл: ' + pendingFile.fileName + ' — вычитываю текст…';
+        try {
+            const meta = {
+                title: $('#fTitle').value.trim(), authors: [me.short].concat(coSelected).join(', '),
+                year: (+$('#fYear').value) || new Date().getFullYear(),
+                venue: $('#fVenue').value.trim() || '—', abstract: $('#fAbstract').value.trim()
+            };
+            const ex = await EX().extractFromFile(pendingFile.fileData, pendingFile.fileName);
+            const fp = await EX().makeFirstPage(pendingFile.fileData, pendingFile.fileName, meta);
+            pendingExtract = { text: ex.text || '', firstPageImg: fp.firstPageImg || '' };
+        } catch (e) { console.warn('processPendingFile:', e); }
+        $('#fileHint').textContent = 'Файл: ' + pendingFile.fileName +
+            (pendingExtract && pendingExtract.text ? ' · вычитано ' + pendingExtract.text.length + ' знаков' : '');
+    }
     $('#fFileInput').addEventListener('change', (e) => {
         const f = e.target.files[0]; if (!f) return;
         if (!/\.(pdf|doc|docx)$/i.test(f.name)) { alert('Только PDF или Word.'); e.target.value = ''; return; }
         if (f.size > 3 * 1024 * 1024) { alert('Файл больше 3 МБ.'); e.target.value = ''; return; }
         const reader = new FileReader();
-        reader.onload = () => { pendingFile = { fileData: reader.result, fileName: f.name }; $('#fileHint').textContent = 'Файл: ' + f.name; };
+        reader.onload = () => {
+            pendingFile = { fileData: reader.result, fileName: f.name };
+            $('#fileHint').textContent = 'Файл: ' + f.name + ' — обрабатывается…';
+            processPendingFile();
+        };
         reader.readAsDataURL(f);
     });
     $('#pubForm').addEventListener('submit', (e) => {
@@ -1382,13 +1519,21 @@ function initPubEdit() {
             refs: refIds
         };
         if (pendingFile) { patch.fileData = pendingFile.fileData; patch.fileName = pendingFile.fileName; patch.hasFile = true; }
+        /* первая страница файла — картинкой на карточке; сам текст нигде не
+           показывается, а хранится отдельно (ou_pub_texts) только для поиска */
+        if (pendingExtract) {
+            patch.firstPageImg = pendingExtract.firstPageImg || (existing && existing.firstPageImg) || '';
+        }
+        const savedText = pendingExtract ? pendingExtract.text : '';
         if (isEdit) {
             LocalPubs.update(existing.id, patch);
+            if (EX()) EX().setPubText(existing.id, savedText || EX().pubTextOf(existing));
             if (pendingFile) CloudFiles.upload('pub-' + existing.id, pendingFile);
             location.href = 'publication.html?id=' + existing.id;
         } else {
             patch.id = nextPubId(); patch.status = 'wait';
             LocalPubs.add(patch);
+            if (EX() && savedText) EX().setPubText(patch.id, savedText);
             if (pendingFile) CloudFiles.upload('pub-' + patch.id, pendingFile);
             location.href = 'publication.html?id=' + patch.id;
         }
@@ -1406,6 +1551,7 @@ function initRequests() {
         list = list.slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
         $('#reqList').innerHTML = list.map(requestCard).join('');
         bindReviewForms($('#reqList'));
+        bindPdfButtons($('#reqList'));
         $('#count').textContent = list.length + ' ' + plural(list.length, ['запрос', 'запроса', 'запросов']);
         $('#empty').hidden = list.length !== 0;
     }
@@ -1467,6 +1613,7 @@ function initNewRequest() {
     const mine = (Store.requests || []).filter((r) => r.author === USER.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
     $('#myReqs').innerHTML = mine.map(requestCard).join('');
     bindReviewForms($('#myReqs'));
+    bindPdfButtons($('#myReqs'));
     $('#myReqCount').textContent = mine.length + ' ' + plural(mine.length, ['запрос', 'запроса', 'запросов']);
     $('#empty').hidden = mine.length !== 0;
 }

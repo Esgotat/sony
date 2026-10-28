@@ -1487,3 +1487,22 @@ a.tile-btn { flex: 1 1 100%; text-align: center; }
 .cmp-card-head .cmp-card-date { margin-left: 0; width: 100%; order: 3; }
 .cmp-admin-toolbar .fbtn { flex: 1 1 auto; text-align: center; }
 }
+
+/* ---------- первая страница файла на карточке публикации ---------- */
+.card.pub-card .pub-cover .pub-cover-pdf {
+position: absolute;
+inset: 0;
+width: 100%;
+height: 100%;
+border: 0;
+display: block;
+background: var(--bg-2);
+pointer-events: none;
+}
+.pub-firstpage-hint {
+font: 700 10px/1 var(--font-m);
+letter-spacing: 0.14em;
+color: rgba(255, 255, 255, 0.6);
+}
+/* кнопка «Скачать в PDF» */
+.file-btn.pdf-dl[disabled] { opacity: 0.6; cursor: progress; }
