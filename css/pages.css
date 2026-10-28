@@ -1486,13 +1486,37 @@ color: rgba(255, 255, 255, 0.6);
 /* кнопка «Скачать в PDF» */
 .file-btn.pdf-dl[disabled] { opacity: 0.6; cursor: progress; }
 
-/* ---------- КАФЕДРЫ: карточка с описанием справа от аватарки ---------- */
+/* ---------- КАФЕДРЫ: горизонтальная карточка с затемнённым фоном ----------
+   Та же карточка, что и у публикаций/коллег, только повёрнутая горизонтально:
+   слева аватарка, справа название, описание и столбик счётчиков Д/К/А/Ч.
+   Фон — полупрозрачный и затемнённый, карточка словно лежит на заднем фоне.
+   (Старый дизайн карточек публикаций и пользователей не тронут.) */
+#cards.cards { grid-template-columns: 1fr; gap: 18px; }
+
 #cards .card.dept-card {
   flex-direction: row;
   align-items: stretch;
   min-height: 0;
   gap: 0;
+  border-radius: 10px;
+  /* затемнённый полупрозрачный фон поверх заднего фона страницы */
+  border: 1px solid rgba(0, 0, 0, 0.35);
+  background: linear-gradient(160deg, rgba(20, 18, 16, 0.55), rgba(20, 18, 16, 0.42));
+  backdrop-filter: blur(9px) saturate(1.2);
+  -webkit-backdrop-filter: blur(9px) saturate(1.2);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.14);
+  color: #f2efe9;
 }
+#cards .card.dept-card:hover {
+  background: linear-gradient(160deg, rgba(20, 18, 16, 0.62), rgba(20, 18, 16, 0.5));
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.42), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+#cards .card.dept-card .fac,
+#cards .card.dept-card .card-title { color: #f2efe9; }
+#cards .card.dept-card .dept-desc { color: rgba(242, 239, 233, 0.72); }
+#cards .card.dept-card .card-emoji { border-right: 1px solid rgba(255, 255, 255, 0.12); }
+#cards .card.dept-card .dept-dkach .stat { color: #f2efe9; }
+
 #cards .card.dept-card .card-emoji {
   width: 150px;
   min-width: 150px;
@@ -1501,8 +1525,14 @@ color: rgba(255, 255, 255, 0.6);
   display: grid;
   place-items: center;
   padding: 16px 10px;
-  background: color-mix(in srgb, var(--stripe, var(--line-2)) 8%, transparent);
+  /* лёгкая полоса цвета направления поверх затемнённого фона */
+  background: color-mix(in srgb, var(--stripe, var(--line-2)) 22%, rgba(0, 0, 0, 0.22));
 }
+/* цветные буквы Д/К/А/Ч поярче — на тёмном фоне читаются лучше */
+#cards .card.dept-card .dept-dkach .b.b-d  { background: rgba(72, 154, 108, 0.6); }
+#cards .card.dept-card .dept-dkach .b.b-k  { background: rgba(222, 168, 44, 0.6); }
+#cards .card.dept-card .dept-dkach .b.b-a  { background: rgba(105, 165, 200, 0.6); }
+#cards .card.dept-card .dept-dkach .b.b-ch { background: rgba(226, 74, 96, 0.6); }
 #cards .card.dept-card .card-emoji svg,
 #cards .card.dept-card .card-emoji img.dept-photo,
 #cards .card.dept-card .card-emoji .dept-photo.avatar-svg {
@@ -1516,7 +1546,8 @@ color: rgba(255, 255, 255, 0.6);
   min-width: 0;
   justify-content: center;
   gap: 8px;
-  padding: 16px 18px 16px 4px;
+  padding: 16px 18px 16px 10px;
+  background: transparent;
 }
 #cards .card.dept-card .card-title {
   font-size: 16px;
@@ -1526,13 +1557,56 @@ color: rgba(255, 255, 255, 0.6);
   margin: 0;
   font: 400 13px/1.5 var(--font-b);
   color: var(--muted);
+  max-width: none;
   display: -webkit-box;
   -webkit-line-clamp: 4;
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+#cards .card.dept-card .dept-desc-empty { font-style: italic; opacity: 0.7; }
+
+/* Справа — столбик счётчиков Д/К/А/Ч со своими полупрозрачными цветами */
+#cards .card.dept-card .dept-dkach {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: stretch;
+  gap: 6px;
+  margin: 0;
+  padding: 14px 14px 14px 0;
+  border-top: none;
+}
+#cards .card.dept-card .dept-dkach .stat {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  font: 700 14px/1 var(--font-m);
+  color: var(--ink);
+}
+#cards .card.dept-card .dept-dkach .b {
+  width: 26px;
+  height: 26px;
+  font-size: 12px;
+  border-radius: 6px;
+}
+#cards .card.dept-card .dept-dkach .b.b-d  { background: rgba(45, 106, 79, 0.45);  color: #fff; -webkit-text-fill-color: #fff; }
+#cards .card.dept-card .dept-dkach .b.b-k  { background: rgba(184, 134, 11, 0.45); color: #fff; -webkit-text-fill-color: #fff; }
+#cards .card.dept-card .dept-dkach .b.b-a  { background: rgba(69, 123, 157, 0.45); color: #fff; -webkit-text-fill-color: #fff; }
+#cards .card.dept-card .dept-dkach .b.b-ch { background: rgba(196, 30, 58, 0.45);  color: #fff; -webkit-text-fill-color: #fff; }
+
 @media (max-width: 560px) {
-  #cards .card.dept-card { flex-direction: column; }
-  #cards .card.dept-card .card-emoji { width: 100%; min-width: 0; height: 140px; }
-  #cards .card.dept-card .card-bottom { padding: 12px 16px 16px; }
+  #cards .card.dept-card { flex-wrap: wrap; }
+  #cards .card.dept-card .card-emoji { width: 120px; min-width: 120px; }
+  #cards .card.dept-card .card-bottom { padding: 12px 14px; }
+  #cards .card.dept-card .dept-dkach {
+    width: 100%;
+    flex-direction: row;
+    justify-content: flex-start;
+    gap: 14px;
+    padding: 0 14px 14px;
+  }
+  #cards .card.dept-card .dept-dkach .stat { flex-direction: column-reverse; gap: 3px; }
 }
