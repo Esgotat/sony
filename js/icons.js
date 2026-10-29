@@ -67,12 +67,42 @@ function icon(name, size) {
     'aria-hidden="true" focusable="false">' + P[key] + '</svg>';
 }
 
-/* большая плашка иконки для карточек кафедр (вместо emoji-icon) */
-function deptIconHTML(dept, fallbackFac) {
-  var name = dept && dept.ic && P[dept.ic] ? dept.ic
+/* цвет линии (stroke) для обложки-фона кафедры: по факультету */
+var FAC_STROKE = {
+  'Математика': '#C41E3A', 'Информатика': '#1D3557', 'Физика': '#2D6A4F',
+  'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
+  'Психология': '#E76F51', 'Языки': '#264653'
+};
+
+/* SVG-иконка кафедры с заданным цветом штриха — используется как фон-паттерн
+   обложек (карточки кафедр делаются «как фон обложки публикаций») */
+function iconColorSVG(name, color, size) {
+  var key = P[name] ? name : 'cap';
+  var px = size || 24;
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="' + px + '" height="' + px + '" ' +
+    'fill="none" stroke="' + color + '" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">' +
+    P[key] + '</svg>';
+}
+
+/* подбор имени иконки для кафедры (поле ic / старый эмодзи e / факультет) */
+function deptIconName(dept, fallbackFac) {
+  return dept && dept.ic && P[dept.ic] ? dept.ic
     : (dept && dept.e && EMOJI_TO_ICON[dept.e]) ? EMOJI_TO_ICON[dept.e]
     : FAC_ICON[(dept && dept.f) || fallbackFac] || 'cap';
-  return '<span class="dept-ic">' + icon(name, 56) + '</span>';
+}
+
+/* большая плашка иконки для карточек кафедр (вместо emoji-icon) */
+function deptIconHTML(dept, fallbackFac) {
+  return '<span class="dept-ic">' + icon(deptIconName(dept, fallbackFac), 56) + '</span>';
+}
+
+/* фон-обложка кафедры: SVG-иконка, залитая цветом факультета, — так же,
+   как у публикаций генерируется паттерн .pub-cover-gen. Возвращает data-URI. */
+function deptCoverURI(dept) {
+  var name = deptIconName(dept);
+  var color = FAC_STROKE[(dept && dept.f) || ''] || '#211F1A';
+  var svg = iconColorSVG(name, color, 240);
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
 }
 
 /* select с вариантами иконок (единый для всех форм кафедры).
@@ -245,7 +275,10 @@ function personAvatarHTML(p, size, cls, square) {
 
 window.OU_icons = {
   icon: icon,
+  iconColorSVG: iconColorSVG,
+  deptIconName: deptIconName,
   deptIconHTML: deptIconHTML,
+  deptCoverURI: deptCoverURI,
   iconSelectHTML: iconSelectHTML,
   normalizeDept: normalizeDept,
   avatarSVG: avatarSVG,

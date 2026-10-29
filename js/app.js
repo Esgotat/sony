@@ -313,7 +313,9 @@ function deptDetailHTML(d) {
     const creator = d.createdBy != null ? esc(d.creatorName || ('пользователь №' + d.createdBy)) : 'база университета';
     const deptCover = d.photo
         ? '<img class="dept-cover-img" src="' + esc(d.photo) + '" alt="Фото кафедры">'
-        : ((window.OU_icons && OU_icons.deptIconHTML) ? '<div class="dept-cover-gen">' + OU_icons.deptIconHTML(d) + '</div>' : '');
+        : ((window.OU_icons && OU_icons.deptCoverURI)
+            ? '<span class="dept-cover-gen" style="background-image:url(&quot;' + OU_icons.deptCoverURI(d) + '&quot;)"></span>'
+            : ((window.OU_icons && OU_icons.deptIconHTML) ? '<div class="dept-cover-gen">' + OU_icons.deptIconHTML(d) + '</div>' : ''));
     return `
 <div class="dept-cover-wrap">
 ${deptCover}
@@ -666,6 +668,15 @@ function initHome() {
         'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
         'Психология': '#E76F51', 'Языки': '#264653'
     };
+/* фоновая картинка для секции картинки карточки кафедры — по образцу
+   обложек публикаций (.pub-cover-gen): сгенерированный SVG заполняет всю
+   секцию от верха до низа как background cover */
+function deptCoverBG(c) {
+  if (!window.OU_icons || !OU_icons.deptCoverURI) return OU_icons && OU_icons.deptIconHTML ? OU_icons.deptIconHTML(c) : '';
+  var uri = OU_icons.deptCoverURI(c);
+  return '<span class="dept-cover-gen" style="background-image:url(&quot;' + uri + '&quot;)"></span>';
+}
+
 function deptCardHTML(c) {
   const s = deptStats(c.n);
   const val = (v) => (v == null ? '—' : v);
@@ -673,7 +684,7 @@ function deptCardHTML(c) {
   <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
     <span class="card-glass" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
-      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
+      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : deptCoverBG(c)}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
@@ -2491,7 +2502,7 @@ function cardHTML(c) {
   <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}">
     <span class="card-glass" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
-      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
+      ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : deptCoverBG(c)}
     </div>
     <div class="card-bottom">
       <span class="fac">${esc(c.f)}</span>
