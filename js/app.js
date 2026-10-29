@@ -671,6 +671,7 @@ function deptCardHTML(c) {
   const val = (v) => (v == null ? '—' : v);
   return `
   <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
+    <span class="card-glass" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
@@ -2488,6 +2489,7 @@ function cardHTML(c) {
   const desc = (c.x || '').trim();
   return `
   <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}">
+    <span class="card-glass" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
