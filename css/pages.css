@@ -1488,26 +1488,54 @@ color: rgba(255, 255, 255, 0.6);
 
 /* ---------- КАФЕДРЫ: карточка с описанием справа от аватарки ---------- */
 #cards .card.dept-card {
+  /* убираем плотный фон/тень/min-height базового класса .card */
+  min-height: 0;
+  box-shadow: none !important;
+  background-color: transparent !important;
   flex-direction: row;
   align-items: stretch;
   min-height: 0;
   /* высота подобрана так, чтобы ВЕСЬ текст (факультет, название,
      описание и строка Д/К/А/Ч) помещался без обрезки */
   height: auto;
-  min-height: 246px;
+  min-height: 272px;
   gap: 0;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  /* РЕАЛЬНО ПРОЗРАЧНЫЙ фон: карточка без своего фона —
+     фон страницы видно насквозь, матовое стекло рисует слой .card-glass */
+  background: transparent !important;
+  box-shadow: none;
+}
+/* матовое «стекло» под содержимым карточек на странице кафедр */
+#cards .card.dept-card .card-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(9px) saturate(140%);
+  backdrop-filter: blur(9px) saturate(140%);
+  box-shadow:
+    0 10px 28px rgba(0, 0, 0, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 /* аватарка кафедры — от верхнего края карточки до нижнего,
    лишнее обрезается (object-fit: cover) */
 #cards .card.dept-card .card-emoji {
-  width: 176px;
-  min-width: 176px;
+  position: relative;
+  z-index: 1;
+  /* узкая полоса — так тексту остаётся больше ширины */
+  width: 120px;
+  min-width: 120px;
   height: 100%;
   align-self: stretch;
   flex: none;
   display: block;
   padding: 0;
-  background: color-mix(in srgb, var(--stripe, var(--line-2)) 8%, transparent);
+  background: transparent;
   overflow: hidden;
 }
 #cards .card.dept-card .card-emoji img.dept-photo,
@@ -1532,14 +1560,18 @@ color: rgba(255, 255, 255, 0.6);
   margin: auto; /* герб по центру полосы, если фото нет */
 }
 #cards .card.dept-card .card-bottom {
-  flex: 1;
+  position: absolute;
+  left: 120px;         /* сразу за полосой аватарки — без пустого зазора */
+  right: 0; top: 0; bottom: 0;
+  z-index: 1;
   min-width: 0;
-  /* текст прижат к левому краю — так его больше видно */
+  overflow-wrap: anywhere; /* длинные слова переносятся, а не вылезают за карточку */
+  /* текст сдвинут максимально влево, чтобы его было видно целиком */
   justify-content: flex-start;
   align-items: flex-start;
   text-align: left;
-  gap: 6px;
-  padding: 14px 12px 14px 12px;
+  gap: 5px;
+  padding: 14px 8px 14px 6px;
 }
 /* факультет над названием — тоже слева, не по центру */
 #cards .card.dept-card .card-bottom .fac {
@@ -1547,12 +1579,14 @@ color: rgba(255, 255, 255, 0.6);
   align-self: flex-start;
 }
 #cards .card.dept-card .card-title {
+  overflow-wrap: anywhere;
   font-size: 16px;
   line-height: 1.25;
   text-align: left;
   align-self: flex-start;
 }
 #cards .card.dept-card .dept-desc {
+  overflow-wrap: anywhere;
   margin: 0;
   font: 400 12.5px/1.45 var(--font-b);
   color: var(--muted);
@@ -1564,6 +1598,7 @@ color: rgba(255, 255, 255, 0.6);
 }
 /* строка Д/К/А/Ч — влево и компактная, чтобы весь текст помещался */
 #cards .card.dept-card .card-stats {
+  flex-wrap: wrap;
   justify-content: flex-start;
   gap: 2px;
   margin-top: 2px;
@@ -1582,6 +1617,7 @@ color: rgba(255, 255, 255, 0.6);
 }
 @media (max-width: 560px) {
   #cards .card.dept-card { flex-direction: column; height: auto; }
+  #cards .card.dept-card .card-bottom { position: static; left: auto; right: auto; top: auto; bottom: auto; }
   #cards .card.dept-card .card-emoji { width: 100%; min-width: 0; height: 160px; }
   #cards .card.dept-card .card-bottom { padding: 12px 14px 16px; }
 }
@@ -1591,37 +1627,53 @@ color: rgba(255, 255, 255, 0.6);
    «стеклянный» полупрозрачный фон, аватарка слева от верха до низа
    ============================================================ */
 .cards-depts {
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  /* колонки растягиваются на всю ширину контейнера — карточки шире */
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 20px;
 }
 body[data-page="kafedry"] .cards-depts .card.dept-card,
 .home-block .cards-depts .card.dept-card {
+  /* снимаем «плотный» фон и внутреннюю тень базового класса .card —
+     иначе карточка выглядит непрозрачной */
+  min-height: 0;
+  box-shadow: none !important;
+  background-color: transparent !important;
   /* горизонтальная визитка */
   flex-direction: row;
   align-items: stretch;
   gap: 0;
   /* выше, чтобы весь текст карточки был виден целиком */
-  min-height: 246px;
+  min-height: 272px;
   height: 100%;
   padding: 0;
   border-radius: 16px;
   /* полупрозрачная рамка поверх «стеклянного» фона */
   border: 1px solid rgba(255, 255, 255, 0.55);
-  /* ПОЛУПРОЗРАЧНЫЙ фон: просвечивает и страница под карточкой,
-     и тонированная подложка цвета факультета (::before) */
-  background: linear-gradient(135deg,
-      rgba(255, 255, 255, 0.38) 0%,
-      rgba(255, 255, 255, 0.16) 55%,
-      rgba(255, 255, 255, 0.28) 100%) !important;
-  -webkit-backdrop-filter: blur(14px) saturate(150%);
-  backdrop-filter: blur(14px) saturate(150%);
+  /* РЕАЛЬНО ПРОЗРАЧНЫЙ фон: у самой карточки background — transparent,
+     поэтому фон страницы (полосатая бумага) видно НАСКВОЗЬ её.
+     Слой ниже (.card-glass) рисует только лёгкое матовое стекло. */
+  background: transparent !important;
+  box-shadow: none;
+}
+/* матовое «стекло» — отдельный слой под содержимым карточки */
+body[data-page="kafedry"] .cards-depts .card.dept-card .card-glass,
+.home-block .cards-depts .card.dept-card .card-glass {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  background: rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(9px) saturate(140%);
+  backdrop-filter: blur(9px) saturate(140%);
   box-shadow:
-    0 10px 28px rgba(0, 0, 0, 0.18),
-    0 2px 8px rgba(0, 0, 0, 0.10),
+    0 10px 28px rgba(0, 0, 0, 0.14),
+    0 2px 8px rgba(0, 0, 0, 0.08),
     inset 0 1px 0 rgba(255, 255, 255, 0.65);
 }
 body[data-page="kafedry"] .cards-depts .card.dept-card:hover,
 .home-block .cards-depts .card.dept-card:hover {
+  box-shadow: none !important;
   transform: translateY(-4px);
   border-color: color-mix(in srgb, var(--stripe, var(--accent)) 45%, rgba(255, 255, 255, 0.5));
   box-shadow:
@@ -1629,8 +1681,8 @@ body[data-page="kafedry"] .cards-depts .card.dept-card:hover,
     0 4px 12px rgba(0, 0, 0, 0.12),
     inset 0 1px 0 rgba(255, 255, 255, 0.75);
 }
-/* мягкая тонированная подложка под стеклом (цвет факультета),
-   просвечивает сквозь полупрозрачный фон карточки */
+/* мягкая тонированная подложка цвета факультета — тоже полупрозрачная,
+   поверх матового стекла, фон страницы просвечивает и сквозь неё */
 body[data-page="kafedry"] .cards-depts .card.dept-card::before,
 .home-block .cards-depts .card.dept-card::before {
   content: '';
@@ -1638,11 +1690,12 @@ body[data-page="kafedry"] .cards-depts .card.dept-card::before,
   inset: 0;
   z-index: 0;
   pointer-events: none;
+  border-radius: inherit;
   background:
     radial-gradient(120% 90% at 0% 0%,
-      color-mix(in srgb, var(--stripe, var(--line-2)) 18%, transparent), transparent 60%),
+      color-mix(in srgb, var(--stripe, var(--line-2)) 14%, transparent), transparent 60%),
     linear-gradient(135deg,
-      color-mix(in srgb, var(--stripe, var(--line-2)) 8%, transparent), transparent 70%);
+      color-mix(in srgb, var(--stripe, var(--line-2)) 6%, transparent), transparent 70%);
 }
 /* аватарка кафедры — слева, от верхнего края карточки до нижнего */
 body[data-page="kafedry"] .cards-depts .card.dept-card .card-emoji,
@@ -1651,9 +1704,9 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .card-emoji,
   z-index: 1;
   /* ширина полосы фиксирована, высота — вся карточка:
      фото обрезается по форме (object-fit: cover) */
-  width: 176px;
-  min-width: 176px;
-  max-width: 176px;
+  width: 120px;
+  min-width: 120px;
+  max-width: 120px;
   flex: none;
   display: block;
   padding: 0;
@@ -1685,15 +1738,18 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .card-emoji .dept-ic,
   /* правая часть визитки: текст прижат к левому краю, показывается целиком */
 body[data-page="kafedry"] .cards-depts .card.dept-card .card-bottom,
 .home-block .cards-depts .card.dept-card .card-bottom {
-  position: relative;
+  position: absolute;
+  left: 120px;         /* сразу за полосой аватарки — без пустого зазора */
+  right: 0; top: 0; bottom: 0;
   z-index: 1;
-  flex: 1;
   min-width: 0;
+  overflow-wrap: anywhere; /* длинные слова переносятся, а не вылезают за карточку */
+  /* текст сдвинут максимально влево, чтобы его было видно целиком */
   justify-content: flex-start;
   align-items: flex-start;
   text-align: left;
-  gap: 6px;
-  padding: 16px 14px 16px 14px;
+  gap: 5px;
+  padding: 16px 8px 16px 6px;
 }
 body[data-page="kafedry"] .cards-depts .card.dept-card .card-bottom .fac,
 .home-block .cards-depts .card.dept-card .card-bottom .fac {
@@ -1701,7 +1757,9 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .card-bottom .fac,
   align-self: flex-start;
 }
 body[data-page="kafedry"] .cards-depts .card.dept-card .card-title,
-.home-block .cards-depts .card.dept-card .card-title {
+.home-block .cards-depts .card.dept-card .card-title,
+body[data-page="kafedry"] .cards-depts .card.dept-card .card-title {
+  overflow-wrap: anywhere;
   font-size: 16px;
   line-height: 1.25;
   text-align: left;
@@ -1709,6 +1767,7 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .card-title,
 }
 body[data-page="kafedry"] .cards-depts .card.dept-card .dept-desc,
 .home-block .cards-depts .card.dept-card .dept-desc {
+  overflow-wrap: anywhere;
   margin: 0;
   font: 400 12.5px/1.45 var(--font-b);
   color: var(--muted);
@@ -1718,8 +1777,10 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .dept-desc,
   display: block;
   overflow: visible;
 }
-/* компактная строка Д/К/А/Ч на главной */
+/* компактная строка Д/К/А/Ч — переносится, если не влезает */
+body[data-page="kafedry"] .cards-depts .card.dept-card .card-stats,
 .home-block .cards-depts .card.dept-card .card-stats {
+  flex-wrap: wrap;
   margin-top: 4px;
   justify-content: flex-start;
   gap: 2px;
@@ -1736,6 +1797,8 @@ body[data-page="kafedry"] .cards-depts .card.dept-card .dept-desc,
 }
 @media (max-width: 560px) {
   .cards-depts { grid-template-columns: 1fr; }
+  body[data-page="kafedry"] .cards-depts .card.dept-card .card-bottom,
+  .home-block .cards-depts .card.dept-card .card-bottom { position: static; left: auto; right: auto; top: auto; bottom: auto; }
   body[data-page="kafedry"] .cards-depts .card.dept-card,
   .home-block .cards-depts .card.dept-card {
     min-height: 0;
