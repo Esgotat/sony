@@ -1507,7 +1507,10 @@ section.cards-depts {
   gap: 20px;
 }
 
-/* карточка: прозрачный фон с лёгким затемнением и оттенком науки */
+/* карточка: ПРОЗРАЧНЫЙ фон с лёгким затемнением и оттенком науки.
+   Слой с закруглёнными углами = сама карточка; подложка под текстом
+   (.card-veil) теперь точно повторяет её форму (border-radius inherit),
+   поэтому «второго прямоугольного слоя» больше не видно. */
 section.cards-depts .card.dept-card {
   position: relative;
   display: flex;
@@ -1520,17 +1523,16 @@ section.cards-depts .card.dept-card {
   min-height: 0;
   border-radius: 16px;
   border: none;
-  /* КЛЮЧЕВОЕ: фон ПРОЗРАЧНЫЙ — слегка затемнённый + оттенок своей науки.
-     Альфа маленькая (0.12–0.22), поэтому сквозь карточку хорошо видно
-     фон страницы; rgba(--facet-rgb) даёт мягкий цветной «свет» сверху,
-     полупрозрачный чёрный — лёгкое затемнение снизу. */
-  background-color: rgba(0, 0, 0, 0.12) !important;
+  /* КЛЮЧЕВОЕ: фон полностью ПРОЗРАЧНЫЙ (альфа 0.07–0.14) — сквозь
+     карточку отлично видно фон страницы; rgba(--facet-rgb) даёт мягкий
+     цветной «свет» сверху, полупрозрачный чёрный — лёгкое затемнение. */
+  background-color: transparent !important;
   background-image: linear-gradient(150deg,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.22) 0%,
-      rgba(0, 0, 0, 0.20) 100%) !important;
+      rgba(var(--facet-rgb, 128, 128, 128), 0.14) 0%,
+      rgba(0, 0, 0, 0.07) 100%) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
-  overflow: visible;   /* тень при наведении должна быть видна вокруг */
+  overflow: hidden;    /* всё содержимое аккуратно обрезается по скруглению */
 }
 /* ХОВЕР: карточка чуть-чуть увеличивается и «приближается» —
    за ней появляется мягкая тень. Больше никаких эффектов. */
@@ -1557,13 +1559,13 @@ section.cards-depts .card.dept-card .card-glass { display: none !important; }
 .cards .card.dept-card,
 body[data-page="kafedry"] .cards-depts .card.dept-card,
 .home-block .cards-depts .card.dept-card {
-  background-color: rgba(0, 0, 0, 0.12) !important;
+  background-color: transparent !important;
   background-image: linear-gradient(150deg,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.22) 0%,
-      rgba(0, 0, 0, 0.20) 100%) !important;
+      rgba(var(--facet-rgb, 128, 128, 128), 0.14) 0%,
+      rgba(0, 0, 0, 0.07) 100%) !important;
   border: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
-  overflow: visible;
+  overflow: hidden;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   min-height: 0 !important;
 }
@@ -1685,10 +1687,12 @@ section.cards-depts .card.dept-card .stat .b {
 }
 /* ============================================================
    ПОДЛОЖКА ПОД ТЕКСТОМ (.card-veil).
-   Она ПО-НАСТОЯЩЕМУ ПРОЗРАЧНАЯ: сквозь неё видно фон страницы.
-   Только лёгкая вуаль — «бумажный» цвет темы (--veil-rgb) на 0.25
-   плюс оттенок той же науки (--facet-rgb), и мягкое размытие
-   (backdrop-filter), чтобы текст читался поверх «просвечивающего» фона.
+   Она ПОЛНОСТЬЮ ПРОЗРАЧНАЯ (background-color: transparent): сквозь
+   неё видно фон страницы. Только лёгкий оттенок науки (--facet-rgb)
+   + мягкое затемнение и размытие (backdrop-filter), чтобы текст
+   читался поверх «просвечивающего» фона. Форма — border-radius: inherit,
+   то есть точно такая же, как у карточки: второго «квадратного» слоя
+   больше не существует.
    Слои, снизу вверх: 1 — фон .dept-card; 2 — span.card-veil;
    3 — аватарка и текст.
    ============================================================ */
@@ -1698,19 +1702,21 @@ section.cards-depts .card.dept-card .card-veil {
   inset: 0;
   z-index: 1;
   pointer-events: none;
-  /* форма подложки: прямоугольник со скруглением со стороны текста */
-  border-radius: 0 16px 16px 0;
-  background-color: rgba(247, 242, 229, 0.25); /* резерв = --bg-2 классики */
-  background-color: rgba(var(--veil-rgb, 247, 242, 229), 0.25) !important;
+  /* форма подложки ТОЧНО повторяет форму карточки (те же скругления,
+     что и у .dept-card) — никаких выступающих «прямоугольных» углов */
+  border-radius: inherit;
+  /* ПОДЛОЖКА ПРОЗРАЧНАЯ: почти не перекрывает фон страницы,
+     лишь слегка притемняет его и подкрашивает оттенком науки */
+  background-color: transparent !important;
   background-image: linear-gradient(150deg,
       rgba(var(--facet-rgb, 128, 128, 128), 0.10) 0%,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.22) 100%) !important;
-  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.10);
-  /* стеклянный эффект: размываем то, что просвечивает сквозь карточку */
+      rgba(0, 0, 0, 0.06) 100%) !important;
+  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.06);
+  /* стеклянный эффект: слегка размываем то, что просвечивает сквозь карточку */
   backdrop-filter: blur(2px) saturate(1.1);
   -webkit-backdrop-filter: blur(2px) saturate(1.1);
 }
-/* в тёмных темах вуаль чуть плотнее (0.3), но всё равно прозрачная,
+/* в тёмных темах вуаль чуть плотнее, но всё равно прозрачная,
    а оттенок науки — только лёгкий, чтобы текст не терял контраст */
 html[data-dark] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='dark']  section.cards-depts .card.dept-card .card-veil,
@@ -1718,11 +1724,11 @@ html[data-theme='night'] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='oxford'] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='burgundy'] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='emerald'] section.cards-depts .card.dept-card .card-veil {
-  background-color: rgba(var(--veil-rgb, 26, 26, 26), 0.30) !important;
+  background-color: transparent !important;
   background-image: linear-gradient(150deg,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.08) 0%,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.18) 100%) !important;
-  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.35);
+      rgba(var(--facet-rgb, 128, 128, 128), 0.10) 0%,
+      rgba(0, 0, 0, 0.10) 100%) !important;
+  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.25);
 }
 /* содержимое — поверх обоих слоёв */
 section.cards-depts .card.dept-card .card-emoji,
