@@ -668,6 +668,7 @@ function deptCardHTML(c) {
   <a class="card card-link dept-card" style="${(typeof deptCardVars === 'function' ? deptCardVars(c.f) : '--stripe:var(--ink);')}" href="dept.html?id=${c.n}">
     <span class="card-glass" aria-hidden="true"></span>
     <span class="card-veil" aria-hidden="true"></span>
+    <span class="card-shine" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
@@ -2494,6 +2495,7 @@ function cardHTML(c) {
   <a class="card card-link dept-card" style="${deptCardVars(c.f)}" href="dept.html?id=${c.n}">
     <span class="card-glass" aria-hidden="true"></span>
     <span class="card-veil" aria-hidden="true"></span>
+    <span class="card-shine" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>

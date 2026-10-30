@@ -1574,13 +1574,142 @@ section.cards-depts .card.dept-card {
   transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
   overflow: hidden;
 }
+/* --- ХОВЕР КАФЕДРЫ: «оживание» карточки в цвете своей науки ---
+   1) карточка приподнимается (-10px), чуть увеличивается (scale 1.02)
+      и «выпрямляется», усиливаются цветная тень и светящаяся рамка;
+   2) по карточке пробегает блик (слой .card-shine поверх текста);
+   3) фото/герб слегка приближается (Ken Burns) и становится резче;
+   4) подложка текста (.card-veil) чуть «открывает» оттенок науки,
+      её внутренняя рамка загораётся цветом направления;
+   5) название кафедры подсвечивается своим цветом, а строка D/K/A/Ch
+      приподнимается.
+   Всё анимируется только через transform / opacity / box-shadow /
+   color — текст остаётся на первом плане и не затемняется.        */
+section.cards-depts .card.dept-card {
+  --hc-a: 0.30;   /* плотность цветной тени под карточкой */
+  --hc-b: 0.45;   /* плотность «светящейся» рамки-ореола */
+}
+.card.dept-card[style*="--facet"] {
+  --hc-a: 0.34;
+  --hc-b: 0.50;
+}
+html[data-dark] section.cards-depts .card.dept-card,
+html[data-theme='dark']  section.cards-depts .card.dept-card,
+html[data-theme='night'] section.cards-depts .card.dept-card,
+html[data-theme='oxford'] section.cards-depts .card.dept-card,
+html[data-theme='burgundy'] section.cards-depts .card.dept-card,
+html[data-theme='emerald'] section.cards-depts .card.dept-card {
+  --hc-a: 0.26;
+  --hc-b: 0.42;
+}
+/* плавность добавляем к тем же свойствам, что уже анимируются выше */
+section.cards-depts .card.dept-card {
+  transition:
+    transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease,
+    scale 0.25s cubic-bezier(.2,.8,.2,1), filter 0.25s ease;
+}
 section.cards-depts .card.dept-card:hover {
-  transform: translateY(-4px);
+  /* ВАЖНО: базовое .card:hover даёт «transform: translateY(-6px)» —
+     без !important карточки кафедр поднимались бы так же, как раньше.
+     Здесь подъём больше (-10px), плюс лёгкий наклон «карточки в руке». */
+  transform: translateY(-10px) rotate(-0.5deg) !important;
   border-color: transparent;
   /* при наведении стекло чуть светлеет и тень становится заметнее */
   background-color: var(--dept-tint-hover, rgba(0, 0, 0, 0.28)) !important;
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24) !important;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.26),                                   /* обычная */
+    0 10px 26px rgba(var(--facet-rgb, 0, 0, 0), var(--hc-a, 0.30)),   /* цвет науки */
+    0 0 0 1px rgba(var(--facet-rgb, 0, 0, 0), var(--hc-b, 0.45)),     /* рамка-ореол */
+    0 0 22px rgba(var(--facet-rgb, 0, 0, 0), calc(var(--hc-b, 0.45) * 0.7)) !important; /* свечение */
+  scale: 1.02;
+  z-index: 3;              /* поднятая карточка не «прячется» за соседей */
+  cursor: pointer;
 }
+/* фокус с клавиатуры — тот же отклик, что и у мыши */
+section.cards-depts .card.dept-card:focus-visible {
+  outline: none;
+  box-shadow:
+    0 14px 30px rgba(0, 0, 0, 0.26),
+    0 0 0 2px rgba(var(--facet-rgb, 0, 0, 0), 0.85) !important;
+  transform: translateY(-10px) !important;
+}
+/* нажатие — карточка «оседает» */
+section.cards-depts .card.dept-card:active {
+  transform: translateY(-3px) !important;
+  scale: 1.005;
+}
+/* чётность: у каждой карточки свой микро-наклон, при наведении она
+   «выпрямляется» — сетка кафедр выглядит живым веером визиток        */
+/* наведение на соседние карточки — тот же отклик, только подъём мягче */
+section.cards-depts .card.dept-card:hover:nth-child(even) {
+  transform: translateY(-9px) rotate(0.5deg) !important;
+}
+/* БЛИК: стеклянная полоса света пробегает по карточке слева направо.
+   Рисуется на отдельном слое .card-shine (z-index 3) — ПОВЕРХ текста,
+   но pointer-events: none и почти прозрачный градиент, поэтому текст
+   не затемняется.                                                      */
+section.cards-depts .card.dept-card .card-shine {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  overflow: hidden;
+  pointer-events: none;
+  border-radius: 16px;
+}
+section.cards-depts .card.dept-card .card-shine::after {
+  content: "";
+  position: absolute;
+  top: -30%; bottom: -30%;
+  left: 0;
+  width: 45%;
+  transform: translateX(-160%) rotate(18deg);
+  opacity: 0;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 35%,
+      rgba(255, 255, 255, 0.18) 50%,
+      rgba(255, 255, 255, 0.06) 65%,
+      transparent 100%);
+}
+section.cards-depts .card.dept-card:hover .card-shine::after {
+  animation: deptShine 0.9s ease-out 1;
+}
+@keyframes deptShine {
+  0%   { transform: translateX(-160%) rotate(18deg); opacity: 0; }
+  25%  { opacity: 1; }
+  100% { transform: translateX(320%)  rotate(18deg); opacity: 0; }
+}
+
+/* если разметка карточки без span.card-shine — блик рисует стекло */
+section.cards-depts .card.dept-card:not(:has(.card-shine)) .card-glass { overflow: hidden; }
+section.cards-depts .card.dept-card:not(:has(.card-shine)) .card-glass::after {
+  content: "";
+  position: absolute;
+  top: -30%; bottom: -30%;
+  left: 0;
+  width: 45%;
+  transform: translateX(-160%) rotate(18deg);
+  opacity: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(255, 255, 255, 0.06) 35%,
+      rgba(255, 255, 255, 0.18) 50%,
+      rgba(255, 255, 255, 0.06) 65%,
+      transparent 100%);
+}
+section.cards-depts .card.dept-card:not(:has(.card-shine)):hover .card-glass::after {
+  animation: deptShine 0.9s ease-out 1;
+}
+/* уважение к системной настройке «уменьшить движение»: стили выше уже
+   отключают анимации/переходы — оставляем только мгновенные состояния */
+@media (prefers-reduced-motion: reduce) {
+  section.cards-depts .card.dept-card:hover,
+  section.cards-depts .card.dept-card:active { transform: none !important; scale: 1; }
+  section.cards-depts .card.dept-card .card-shine::after,
+  section.cards-depts .card.dept-card:not(:has(.card-shine)) .card-glass::after { display: none; }
+}
+
 /* слой-«стекло» внутри карточки: тот же затемнённо-прозрачный фон
    цвета науки; лежит НИЖЕ текста (z-index 0 против 2 у содержимого) */
 section.cards-depts .card.dept-card .card-glass {
@@ -1715,19 +1844,49 @@ section.cards-depts .card.dept-card .stat .b {
   width: 22px;
   height: 22px;
   font-size: 11px;
+  /* буквенные значки Д/К/А/Ч при наведении «подпрыгивают» (scale —
+     не сбивает их базовый translate(-50%,-50%), если он есть)         */
+  transition: transform 0.3s cubic-bezier(.2,.8,.2,1), box-shadow 0.3s ease;
 }
+section.cards-depts .card.dept-card:hover .stat .b {
+  transform: scale(1.12);
+  box-shadow: 0 3px 8px rgba(var(--facet-rgb, 0, 0, 0), 0.35);
+}
+section.cards-depts .card.dept-card:hover .stat:nth-child(2) .b { transition-delay: 0.04s; }
+section.cards-depts .card.dept-card:hover .stat:nth-child(3) .b { transition-delay: 0.08s; }
+section.cards-depts .card.dept-card:hover .stat:nth-child(4) .b { transition-delay: 0.12s; }
 @media (max-width: 560px) {
   section.cards-depts { grid-template-columns: 1fr; }
   section.cards-depts .card.dept-card .card-emoji {
     width: 132px; min-width: 132px; max-width: 132px;
   }
 }
+/* СВЕЧЕНИЕ ПО КРАЮ: тонкое кольцо цвета науки поверх стекла, но ПОД
+   подложкой текста и самим текстом (z-index 0 против 1 и 2) — поэтому
+   оно никогда не задевает текст. Плюс мягкий «внешний» ореол.         */
+section.cards-depts .card.dept-card::before {
+  display: block !important;
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  border-radius: inherit;
+  opacity: 0;
+  box-shadow:
+    inset 0 0 0 1px rgba(var(--facet-rgb, 0, 0, 0), 0.55),
+    inset 0 0 18px rgba(var(--facet-rgb, 0, 0, 0), 0.30);
+  transition: opacity 0.3s ease;
+}
+section.cards-depts .card.dept-card:hover::before { opacity: 1; }
+
 /* страховка: никакие внутренние слои карточки кафедр не имеют своего фона —
    сквозь них всегда виден затемнённо-прозрачный фон самой карточки.
    Кроме слоёв .card-glass и .card-veil — они рисуют «тонированное стекло» */
-section.cards-depts .card.dept-card::before,
+/* кольцо цвета науки (::before) остаётся включённым — оно под текстом;
+   псевдо-слой ::after карточкам кафедр не нужен                       */
 section.cards-depts .card.dept-card::after { display: none !important; }
-section.cards-depts .card.dept-card > *:not(.card-glass):not(.card-veil) { background-color: transparent !important; }
+section.cards-depts .card.dept-card > *:not(.card-glass):not(.card-veil):not(.card-shine) { background-color: transparent !important; }
 
 /* ============================================================
    ТЕКСТ — НА ПЕРВОМ ПЛАНЕ.
@@ -1752,6 +1911,7 @@ section.cards-depts .card.dept-card .card-veil {
   background: var(--bg-2) !important;
   background: color-mix(in srgb, var(--facet, transparent) 9%, var(--bg-2)) !important;
   box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.10);
+  transition: box-shadow 0.3s ease, background-color 0.3s ease;
 }
 /* в тёмных темах подложка — тёмная, но плотная (не прозрачная) */
 html[data-dark] section.cards-depts .card.dept-card .card-veil,
@@ -1775,6 +1935,68 @@ section.cards-depts .card.dept-card .card-bottom .fac {
 }
 section.cards-depts .card.dept-card .card-title {
   color: var(--ink);
+}
+/* --- ХОВЕР: внутренние слои карточки ---
+   фото/герб слегка приближается, подложка текста усиливает оттенок
+   науки и получает светящуюся кромку, название загораётся цветом
+   направления, а строка Д/К/А/Ч приподнимается                     */
+section.cards-depts .card.dept-card .dept-photo,
+section.cards-depts .card.dept-card .card-emoji .dept-ic,
+section.cards-depts .card.dept-card .card-emoji svg {
+  transition: transform 0.45s cubic-bezier(.2,.8,.2,1), filter 0.3s ease;
+  will-change: transform;
+}
+section.cards-depts .card.dept-card:hover .dept-photo,
+section.cards-depts .card.dept-card:hover .card-emoji .dept-ic,
+section.cards-depts .card.dept-card:hover .card-emoji svg {
+  transform: scale(1.07);
+  filter: saturate(1.12) contrast(1.04);
+}
+/* полоса фото: ширина НЕ меняется (иначе дёрнулся бы весь текст) —
+   при наведении фото только подсвечивается изнутри своим цветом       */
+section.cards-depts .card.dept-card .card-emoji::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: linear-gradient(90deg,
+      rgba(var(--facet-rgb, 0, 0, 0), 0.00) 40%,
+      rgba(var(--facet-rgb, 0, 0, 0), 0.22) 100%);
+  transition: opacity 0.35s ease;
+}
+section.cards-depts .card.dept-card:hover .card-emoji::after { opacity: 1; }
+section.cards-depts .card.dept-card:hover .card-veil {
+  /* та же «бумажная» подложка, но оттенок науки заметнее + светящаяся кромка */
+  background: var(--bg-2) !important;
+  background: color-mix(in srgb, var(--facet, transparent) 18%, var(--bg-2)) !important;
+  box-shadow:
+    inset 3px 0 8px rgba(0, 0, 0, 0.10),
+    inset 0 0 0 1px rgba(var(--facet-rgb, 0, 0, 0), 0.22),
+    inset 0 -22px 26px -20px rgba(var(--facet-rgb, 0, 0, 0), 0.30) !important;
+}
+html[data-dark] section.cards-depts .card.dept-card:hover .card-veil,
+html[data-theme='dark']  section.cards-depts .card.dept-card:hover .card-veil,
+html[data-theme='night'] section.cards-depts .card.dept-card:hover .card-veil,
+html[data-theme='oxford'] section.cards-depts .card.dept-card:hover .card-veil,
+html[data-theme='burgundy'] section.cards-depts .card.dept-card:hover .card-veil,
+html[data-theme='emerald'] section.cards-depts .card.dept-card:hover .card-veil {
+  background: var(--bg-2) !important;
+  background: color-mix(in srgb, var(--facet, transparent) 24%, var(--bg-2)) !important;
+  box-shadow:
+    inset 3px 0 8px rgba(0, 0, 0, 0.35),
+    inset 0 0 0 1px rgba(var(--facet-rgb, 0, 0, 0), 0.30),
+    inset 0 -22px 26px -20px rgba(var(--facet-rgb, 0, 0, 0), 0.38) !important;
+}
+section.cards-depts .card.dept-card .card-title {
+  /* заголовок лежит в начале строки, поэтому расширение разрядки
+     не сдвигает его влево/вправо — только «распухает» вправо         */
+  transform-origin: left center;
+  transition: color 0.25s ease, letter-spacing 0.3s ease;
+}
+section.cards-depts .card.dept-card:hover .card-title {
+  color: var(--facet, var(--ink));
+  letter-spacing: 0.3px;
 }
 section.cards-depts .card.dept-card .dept-desc {
   overflow-wrap: anywhere;
