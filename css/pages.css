@@ -1493,12 +1493,60 @@ color: rgba(255, 255, 255, 0.6);
    rgba(..., 0.30) — сквозь него видно фон страницы (полосатую
    «бумагу»), при этом текст остаётся читаемым.
    Высота = размер текста + небольшой запас («чуть выше текста»).
+   ЦВЕТ СТЕКЛА — цвет своей науки (--facet / --facet-rgb):
+   стекло по умолчанию чёрное (затемнение), но как только у
+   карточки задан оттенок направления, оно тонируется в его цвет.
+   ТЕКСТ — на первом плане: свой собственный слой (.card-veil)
+   лежит МЕЖДУ стеклом и содержимым, поэтому текст стекла не
+   касается и никак не затемняется.
    ============================================================ */
 
 /* --- общая секция со списком кафедр (страница «Кафедры») --- */
 section.cards-depts {
   grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
   gap: 20px;
+}
+
+/* Палитра «стекла»: плотность затемнения.
+   По умолчанию — нейтральное тёмное стекло;
+   при наличии --facet (цвет науки) стекло перекрашивается в него. */
+section.cards-depts .card.dept-card,
+.card.dept-card {
+  --dept-tint: rgba(0, 0, 0, 0.35);
+  --dept-tint-hover: rgba(0, 0, 0, 0.28);
+}
+/* в тёмных темах («data-dark» ставит layout.js для dark/night/oxford/
+   burgundy/emerald) стекло светлее («матовое») */
+html[data-dark] .card.dept-card,
+html[data-theme='dark']  .card.dept-card,
+html[data-theme='night'] .card.dept-card,
+html[data-theme='oxford'] .card.dept-card,
+html[data-theme='burgundy'] .card.dept-card,
+html[data-theme='emerald'] .card.dept-card {
+  --dept-tint: rgba(255, 255, 255, 0.10);
+  --dept-tint-hover: rgba(255, 255, 255, 0.16);
+}
+/* СТЕКЛО В ЦВЕТ НАУКИ: селектор с [style*="--facet"] специфичнее всех
+   правил выше и задаёт тонировку один раз для любой темы.
+   Переменные плотности (--tint-a / --tint-a-hover) темы меняют локально,
+   поэтому в светлых темах стекло темнее, а в тёмных — мягче. */
+.card.dept-card[style*="--facet"] {
+  --tint-a: 0.40;
+  --tint-a-hover: 0.32;
+  --dept-tint: rgba(var(--facet-rgb, 0, 0, 0), var(--tint-a, 0.40));
+  --dept-tint-hover: rgba(var(--facet-rgb, 0, 0, 0), var(--tint-a-hover, 0.32));
+}
+html[data-dark] .card.dept-card[style*="--facet"],
+html[data-theme='dark']  .card.dept-card[style*="--facet"],
+html[data-theme='night'] .card.dept-card[style*="--facet"],
+html[data-theme='oxford'] .card.dept-card[style*="--facet"],
+html[data-theme='burgundy'] .card.dept-card[style*="--facet"],
+html[data-theme='emerald'] .card.dept-card[style*="--facet"] {
+  /* локальная (менее специфичная) попытка не перебивает значения из
+     правила выше — density берётся по умолчанию; оставляем те же цифры,
+     что и для цветного «тёплого» стекла */
+  --tint-a: 0.40;
+  --tint-a-hover: 0.32;
 }
 
 /* карточка: ПОЛУПРОЗРАЧНЫЙ и ЗАТЕМНЁННЫЙ фон («тонированное стекло»)
@@ -1515,10 +1563,9 @@ section.cards-depts .card.dept-card {
   min-height: 0;
   border-radius: 16px;
   border: none;
-  /* КЛЮЧЕВОЕ: фон полупрозрачный и затемнённый — «тонированное стекло»:
-     сквозь карточку видно фон страницы, но он слегка затемнён.
-     --dept-tint / --dept-tint-hover — цвет и плотность затемнения
-     (по умолчанию — чёрный 35% / 28%, в тёмных темах — мягче) */
+  /* КЛЮЧЕВОЕ: фон полупрозрачный и затемнённый — «тонированное стекло»
+     цвета своей науки: сквозь карточку видно фон страницы, но он слегка
+     затемнён оттенком направления (--dept-tint собирается выше). */
   background-color: var(--dept-tint, rgba(0, 0, 0, 0.35)) !important;
   background-image: none !important;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
@@ -1534,8 +1581,8 @@ section.cards-depts .card.dept-card:hover {
   background-color: var(--dept-tint-hover, rgba(0, 0, 0, 0.28)) !important;
   box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24) !important;
 }
-/* слой-«стекло» внутри карточки: тот же затемнённо-прозрачный фон,
-   лежит под аватаркой и текстом (z-index ниже, чем у содержимого) */
+/* слой-«стекло» внутри карточки: тот же затемнённо-прозрачный фон
+   цвета науки; лежит НИЖЕ текста (z-index 0 против 2 у содержимого) */
 section.cards-depts .card.dept-card .card-glass {
   display: block !important;
   position: absolute;
@@ -1544,15 +1591,28 @@ section.cards-depts .card.dept-card .card-glass {
   pointer-events: none;
   background: var(--dept-tint, rgba(0, 0, 0, 0.35));
 }
-/* в тёмных темах затемнение делаем светлым («матовое стекло»),
-   иначе на тёмном фоне карточка выглядела бы чёрной дырой */
-html[data-theme='dark']  section.cards-depts .card.dept-card,
-html[data-theme='night'] section.cards-depts .card.dept-card,
-html[data-theme='oxford'] section.cards-depts .card.dept-card,
-html[data-theme='burgundy'] section.cards-depts .card.dept-card,
-html[data-theme='emerald'] section.cards-depts .card.dept-card {
-  --dept-tint: rgba(255, 255, 255, 0.10);
-  --dept-tint-hover: rgba(255, 255, 255, 0.16);
+/* страховка для мест, где разметка карточки без span.card-glass
+   (главная): veil рисует то же тонированное стекло под текстом */
+section.cards-depts .card.dept-card .card-veil {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--dept-tint, rgba(0, 0, 0, 0.35));
+}
+/* точечное переопределение базового .card (непрозрачный --bg-2) —
+   только для карточек кафедр: фон делаем полупрозрачным и затемнённым */
+.card.dept-card,
+.cards .card.dept-card,
+body[data-page="kafedry"] .cards-depts .card.dept-card,
+.home-block .cards-depts .card.dept-card {
+  background-color: var(--dept-tint, rgba(0, 0, 0, 0.35)) !important;
+  background-image: none !important;
+  border: none;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  min-height: 0 !important;
 }
 
 /* аватарка — во всю высоту карточки, лишнее обрезается */
@@ -1664,29 +1724,65 @@ section.cards-depts .card.dept-card .stat .b {
 }
 /* страховка: никакие внутренние слои карточки кафедр не имеют своего фона —
    сквозь них всегда виден затемнённо-прозрачный фон самой карточки.
-   Кроме слоя .card-glass — он и рисует «тонированное стекло» */
+   Кроме слоёв .card-glass и .card-veil — они рисуют «тонированное стекло» */
 section.cards-depts .card.dept-card::before,
 section.cards-depts .card.dept-card::after { display: none !important; }
-section.cards-depts .card.dept-card > *:not(.card-glass) { background-color: transparent !important; }
-/* точечное переопределение базового .card (непрозрачный --bg-2) —
-   только для карточек кафедр: фон делаем полупрозрачным и затемнённым */
-.card.dept-card,
-.cards .card.dept-card,
-body[data-page="kafedry"] .cards-depts .card.dept-card,
-.home-block .cards-depts .card.dept-card {
-  background-color: var(--dept-tint, rgba(0, 0, 0, 0.35)) !important;
-  background-image: none !important;
-  border: none;
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  min-height: 0 !important;
+section.cards-depts .card.dept-card > *:not(.card-glass):not(.card-veil) { background-color: transparent !important; }
+
+/* ============================================================
+   ТЕКСТ — НА ПЕРВОМ ПЛАНЕ.
+   Слои карточки, снизу вверх:
+     0 — span.card-glass («тонированное стекло» цвета науки);
+     1 — span.card-veil (НЕПРОЗРАЧНАЯ подложка только под текстом);
+     2 — аватарка и текст (.card-emoji / .card-bottom).
+   Текст лежит на своей светлой подложке и поэтому совсем
+   не затемняется полупрозрачным цветным стеклом.
+   ============================================================ */
+section.cards-depts .card.dept-card .card-veil {
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  /* форма подложки: прямоугольник со скруглением со стороны текста */
+  border-radius: 0 16px 16px 0;
+  /* ПЛОТНАЯ («бумажная») подложка с лёгким оттенком науки —
+     текст лежит на ней и поэтому совсем не затемняется стеклом.
+     Фолбэк для браузеров без color-mix(): просто --bg-2. */
+  background: var(--bg-2) !important;
+  background: color-mix(in srgb, var(--facet, transparent) 9%, var(--bg-2)) !important;
+  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.10);
 }
-/* тот же приём для тёмных тем — светлое «матовое стекло» */
-html[data-theme='dark']  .card.dept-card,
-html[data-theme='night'] .card.dept-card,
-html[data-theme='oxford'] .card.dept-card,
-html[data-theme='burgundy'] .card.dept-card,
-html[data-theme='emerald'] .card.dept-card {
-  --dept-tint: rgba(255, 255, 255, 0.10);
+/* в тёмных темах подложка — тёмная, но плотная (не прозрачная) */
+html[data-dark] section.cards-depts .card.dept-card .card-veil,
+html[data-theme='dark']  section.cards-depts .card.dept-card .card-veil,
+html[data-theme='night'] section.cards-depts .card.dept-card .card-veil,
+html[data-theme='oxford'] section.cards-depts .card.dept-card .card-veil,
+html[data-theme='burgundy'] section.cards-depts .card.dept-card .card-veil,
+html[data-theme='emerald'] section.cards-depts .card.dept-card .card-veil {
+  background: var(--bg-2) !important;
+  background: color-mix(in srgb, var(--facet, transparent) 14%, var(--bg-2)) !important;
+  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.35);
+}
+/* содержимое — поверх обоих слоёв */
+section.cards-depts .card.dept-card .card-emoji,
+section.cards-depts .card.dept-card .card-bottom {
+  z-index: 2 !important;
+}
+/* сам текст — максимально контрастный (никакого «мuted») */
+section.cards-depts .card.dept-card .card-bottom .fac {
+  color: var(--facet, var(--ink));
+}
+section.cards-depts .card.dept-card .card-title {
+  color: var(--ink);
+}
+section.cards-depts .card.dept-card .dept-desc {
+  overflow-wrap: anywhere;
+  margin: 0;
+  font: 400 12.5px/1.45 var(--font-b);
+  color: var(--ink);
+  text-align: left;
+  align-self: stretch;
+  display: block;
+  overflow: visible;
 }
