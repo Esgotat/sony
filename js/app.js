@@ -2467,8 +2467,13 @@ function initChats() {
 // КАФЕДРЫ (реестр)
 // ============================================================
 /* Палитра наук: у каждого направления свой цвет.
-   --facet — сам цвет (используется для названия направления);
-   --facet-rgb оставлен на случай цветных акцентов в CSS */
+   --facet      — сам цвет (название направления, акценты);
+   --facet-rgb  — тот же цвет списком «r, g, b» — нужен CSS, чтобы
+                  строить из него полупрозрачные слои через rgba();
+   --veil-rgb   — «бумажный» цвет темы (--bg-2) списком «r, g, b»:
+                  из него CSS делает полупрозрачную подложку текста;
+   --facet-deep — более тёмный/насыщенный тон той же науки: он даёт
+                  фону карточки именно «затемнение», а не просто разбавление белым. */
 const FAC_COLOR = {
     'Математика': '#C41E3A', 'Информатика': '#1D3557', 'Физика': '#2D6A4F',
     'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
@@ -2477,11 +2482,19 @@ const FAC_COLOR = {
 const FAC_RGB = Object.fromEntries(
     Object.entries(FAC_COLOR).map(([k, v]) => [k, [1, 3, 5].map(i => parseInt(v.slice(i, i + 2), 16)).join(', ')])
 );
-/* inline-стили карточки: полоса-акцент + оттенок фона своей науки */
+/* оттенок той же науки, но темнее (умножение яркости на ~0.55) */
+const FAC_DEEP = Object.fromEntries(
+    Object.entries(FAC_COLOR).map(([k, v]) => {
+        const ch = [1, 3, 5].map(i => Math.round(parseInt(v.slice(i, i + 2), 16) * 0.55));
+        return [k, '#' + ch.map(x => x.toString(16).padStart(2, '0')).join('')];
+    })
+);
+/* inline-стили карточки: полоса-акцент + оттенок фона своей науки.
+   «Бумажный» цвет темы (--veil-rgb) кладёт в :root layout.js. */
 function deptCardVars(f) {
     const col = FAC_COLOR[f];
-    if (!col) return '--stripe:var(--line-2);';
-    return `--stripe:${col};--facet:${col};--facet-rgb:${FAC_RGB[f]};`;
+    if (!col) return '--stripe:var(--line-2);--facet:var(--ink);--facet-rgb:128, 128, 128;--facet-deep:#5a5a5a;';
+    return `--stripe:${col};--facet:${col};--facet-rgb:${FAC_RGB[f]};--facet-deep:${FAC_DEEP[f]};`;
 }
 function initKafedry() {
     const pre = params.get('fac');
