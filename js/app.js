@@ -661,17 +661,12 @@ function initHome() {
 
 
     /* ---------- карточки кафедр ---------- */
-    const FAC_COLOR = {
-        'Математика': '#C41E3A', 'Информатика': '#1D3557', 'Физика': '#2D6A4F',
-        'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
-        'Психология': '#E76F51', 'Языки': '#264653'
-    };
 function deptCardHTML(c) {
   const s = deptStats(c.n);
   const val = (v) => (v == null ? '—' : v);
   return `
-  <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--ink)'}" href="dept.html?id=${c.n}">
-    <span class="card-glass" aria-hidden="true"></span>
+  <a class="card card-link dept-card" style="${(typeof deptCardVars === 'function' ? deptCardVars(c.f) : '--stripe:var(--ink);')}" href="dept.html?id=${c.n}">
+    <span class="card-veil" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
@@ -2471,25 +2466,32 @@ function initChats() {
 // ============================================================
 // КАФЕДРЫ (реестр)
 // ============================================================
+/* Палитра наук: у каждого направления свой цвет.
+   --facet — сам цвет (используется для названия направления);
+   --facet-rgb оставлен на случай цветных акцентов в CSS */
 const FAC_COLOR = {
-    'Математика': '#C05A2E', 'Информатика': '#3E6C8E', 'Физика': '#7D8F4C',
-    'Химия': '#A98153', 'Гуманитарные науки': '#7A9480', 'Экономика': '#6B2D5C',
-    'Психология': '#8465A9', 'Языки': '#2E7F8F'
+    'Математика': '#C41E3A', 'Информатика': '#1D3557', 'Физика': '#2D6A4F',
+    'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
+    'Психология': '#E76F51', 'Языки': '#264653'
 };
+const FAC_RGB = Object.fromEntries(
+    Object.entries(FAC_COLOR).map(([k, v]) => [k, [1, 3, 5].map(i => parseInt(v.slice(i, i + 2), 16)).join(', ')])
+);
+/* inline-стили карточки: полоса-акцент + оттенок фона своей науки */
+function deptCardVars(f) {
+    const col = FAC_COLOR[f];
+    if (!col) return '--stripe:var(--line-2);';
+    return `--stripe:${col};--facet:${col};--facet-rgb:${FAC_RGB[f]};`;
+}
 function initKafedry() {
     const pre = params.get('fac');
     const state = { fac: FAC.includes(pre) ? pre : 'Все' };
-    const FAC_COLOR = {
-        'Математика': '#C41E3A', 'Информатика': '#1D3557', 'Физика': '#2D6A4F',
-        'Химия': '#9C6644', 'Гуманитарные науки': '#6B2D8B', 'Экономика': '#457B9D',
-        'Психология': '#E76F51', 'Языки': '#264653'
-    };
 
 function cardHTML(c) {
   const desc = (c.x || '').trim();
   return `
-  <a class="card card-link dept-card" style="--stripe:${FAC_COLOR[c.f] || 'var(--line-2)'}" href="dept.html?id=${c.n}">
-    <span class="card-glass" aria-hidden="true"></span>
+  <a class="card card-link dept-card" style="${deptCardVars(c.f)}" href="dept.html?id=${c.n}">
+    <span class="card-veil" aria-hidden="true"></span>
     <div class="card-emoji" aria-hidden="true">
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
