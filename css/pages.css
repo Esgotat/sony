@@ -1501,7 +1501,8 @@ section.cards-depts {
   gap: 20px;
 }
 
-/* карточка: свой ПОЛУПРОЗРАЧНЫЙ фон вместо непрозрачного --bg-2 */
+/* карточка: ПОЛУПРОЗРАЧНЫЙ и ЗАТЕМНЁННЫЙ фон («тонированное стекло»)
+   вместо полностью прозрачного */
 section.cards-depts .card.dept-card {
   position: relative;
   display: flex;
@@ -1514,21 +1515,44 @@ section.cards-depts .card.dept-card {
   min-height: 0;
   border-radius: 16px;
   border: none;
-  /* КЛЮЧЕВОЕ: фон полностью прозрачный — как у карточек публикаций
-     (.card.pub-card { background: transparent; border: none }) */
-  background-color: transparent !important;
+  /* КЛЮЧЕВОЕ: фон полупрозрачный и затемнённый — «тонированное стекло»:
+     сквозь карточку видно фон страницы, но он слегка затемнён.
+     --dept-tint / --dept-tint-hover — цвет и плотность затемнения
+     (по умолчанию — чёрный 35% / 28%, в тёмных темах — мягче) */
+  background-color: var(--dept-tint, rgba(0, 0, 0, 0.35)) !important;
   background-image: none !important;
-  box-shadow: none !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  transition: transform 0.25s ease, background-color 0.25s ease, box-shadow 0.25s ease;
   overflow: hidden;
 }
 section.cards-depts .card.dept-card:hover {
   transform: translateY(-4px);
   border-color: transparent;
-  box-shadow: none !important;
+  /* при наведении стекло чуть светлеет и тень становится заметнее */
+  background-color: var(--dept-tint-hover, rgba(0, 0, 0, 0.28)) !important;
+  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.24) !important;
 }
-/* старый слой-«стекло» больше не нужен — фон у карточки теперь прозрачный сам */
+/* слой-«стекло» внутри карточки: тот же затемнённо-прозрачный фон,
+   лежит под аватаркой и текстом (z-index ниже, чем у содержимого) */
 section.cards-depts .card.dept-card .card-glass {
-  display: none !important;
+  display: block !important;
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--dept-tint, rgba(0, 0, 0, 0.35));
+}
+/* в тёмных темах затемнение делаем светлым («матовое стекло»),
+   иначе на тёмном фоне карточка выглядела бы чёрной дырой */
+html[data-theme='dark']  section.cards-depts .card.dept-card,
+html[data-theme='night'] section.cards-depts .card.dept-card,
+html[data-theme='oxford'] section.cards-depts .card.dept-card,
+html[data-theme='burgundy'] section.cards-depts .card.dept-card,
+html[data-theme='emerald'] section.cards-depts .card.dept-card {
+  --dept-tint: rgba(255, 255, 255, 0.10);
+  --dept-tint-hover: rgba(255, 255, 255, 0.16);
 }
 
 /* аватарка — во всю высоту карточки, лишнее обрезается */
@@ -1639,21 +1663,30 @@ section.cards-depts .card.dept-card .stat .b {
   }
 }
 /* страховка: никакие внутренние слои карточки кафедр не имеют своего фона —
-   сквозь них всегда виден полупрозрачный фон самой карточки и фон страницы */
+   сквозь них всегда виден затемнённо-прозрачный фон самой карточки.
+   Кроме слоя .card-glass — он и рисует «тонированное стекло» */
 section.cards-depts .card.dept-card::before,
 section.cards-depts .card.dept-card::after { display: none !important; }
-section.cards-depts .card.dept-card > * { background-color: transparent !important; }
+section.cards-depts .card.dept-card > *:not(.card-glass) { background-color: transparent !important; }
 /* точечное переопределение базового .card (непрозрачный --bg-2) —
-   только для карточек кафедр: фон делаем полностью прозрачным, как у
-   карточек публикаций (.card.pub-card { background: transparent }) */
+   только для карточек кафедр: фон делаем полупрозрачным и затемнённым */
 .card.dept-card,
 .cards .card.dept-card,
 body[data-page="kafedry"] .cards-depts .card.dept-card,
 .home-block .cards-depts .card.dept-card {
-  /* тот же приём, что и у карточек публикаций: обложка/фон прозрачные */
-  background: transparent !important;
+  background-color: var(--dept-tint, rgba(0, 0, 0, 0.35)) !important;
   background-image: none !important;
   border: none;
-  box-shadow: none !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18) !important;
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
   min-height: 0 !important;
+}
+/* тот же приём для тёмных тем — светлое «матовое стекло» */
+html[data-theme='dark']  .card.dept-card,
+html[data-theme='night'] .card.dept-card,
+html[data-theme='oxford'] .card.dept-card,
+html[data-theme='burgundy'] .card.dept-card,
+html[data-theme='emerald'] .card.dept-card {
+  --dept-tint: rgba(255, 255, 255, 0.10);
 }
