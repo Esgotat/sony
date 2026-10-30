@@ -175,7 +175,25 @@ function saveTheme(id, color) {
 
 const pref = themePref();
 applyTheme(pref.id, pref.color);
-window.OU_theme = { apply: applyTheme, refresh: () => { const p = themePref(); applyTheme(p.id, p.color); return p; } };
+/* «бумажный» цвет темы (--bg-2) как триплет «r, g, b» в :root:
+   нужен CSS, чтобы строить полупрозрачные подложки через rgba()
+   (карточки кафедр). Обновляется при старте и при смене темы. */
+function veilRgbTriplet() {
+    const c = getComputedStyle(document.documentElement).getPropertyValue('--bg-2').trim();
+    return hexToRgb(c).join(', ');
+}
+function applyVeilRgb() {
+    document.documentElement.style.setProperty('--veil-rgb', veilRgbTriplet());
+}
+applyVeilRgb();
+window.OU_theme = {
+    apply: function () {
+        const r = applyTheme.apply(this, arguments);
+        applyVeilRgb();
+        return r;
+    },
+    refresh: () => { const p = themePref(); OU_theme.apply(p.id, p.color); return p; }
+};
 
 /* ---------- ШАПКА ---------- */
 /* Пункт «Главная» убран из шапки — в бренд-логотип уже ведёт на index.html.
@@ -266,11 +284,11 @@ if (themeBtn && themeMenu) {
 }
 if (themeMenu) {
     themeMenu.querySelectorAll('button[data-theme-id]').forEach((b) => {
-        b.addEventListener('click', () => { saveTheme(b.dataset.themeId); applyTheme(b.dataset.themeId); themeMenu.hidden = true; });
+        b.addEventListener('click', () => { saveTheme(b.dataset.themeId); OU_theme.apply(b.dataset.themeId); themeMenu.hidden = true; });
     });
 }
 if (colorInput) {
-    colorInput.addEventListener('input', () => { saveTheme('custom', colorInput.value); applyTheme('custom', colorInput.value); });
+    colorInput.addEventListener('input', () => { saveTheme('custom', colorInput.value); OU_theme.apply('custom', colorInput.value); });
 }
 
 /* ---------- ПОДМЕНЮ ---------- */
