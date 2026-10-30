@@ -83,8 +83,12 @@ function mergeState(a, b) {
 
 function applyUserDeletes(state) {
   const del = state.ou_users_deleted || [];
-  if (!del.length || !Array.isArray(state.ou_users)) return state;
-  state.ou_users = state.ou_users.filter((u) => !del.some((d) => d.id === u.id || d.email === u.email));
+  if (!del.length) return state;
+  /* ou_users после объезда Firebase может быть объектом, а не массивом */
+  const arr = Array.isArray(state.ou_users) ? state.ou_users
+            : (state.ou_users && typeof state.ou_users === 'object' ? Object.values(state.ou_users) : null);
+  if (!arr) return state;
+  state.ou_users = arr.filter((u) => u && !del.some((d) => d && (d.id === u.id || (d.email && d.email === u.email))));
   return state;
 }
 
@@ -125,107 +129,6 @@ const CloudSync = {
     try { localStorage.setItem('ou_cloud_prev', JSON.stringify(state)); } catch (e) {}
     this.silent = false;
   },
-  async load() {
-    try {
-      const cloud = await FBApi.get('/state');
-      if (!cloud || typeof cloud !== 'object' || Array.isArray(cloud)) return;
-      /* для общих списков (пользователи, кафедры) облако — источник истины:
-         локальный кэш этого браузера не должен перетирать данные других пользователей */
-      const merged = mergeState(this.readLocal(), cloud);
-      ['ou_users', 'ou_departments'].forEach((k) => {
-        if (cloud[k] !== undefined) merged[k] = cloud[k];
-      });
-      /* ПРАВКИ ЛЮДЕЙ — сливаем ПО ЧЕЛОВЕКАМ (по id), а не целиком.
-         Раньше ou_people_overrides брался из облака как есть: если чужая аватарка
-         в нём потерялась (конфликт записей), восстановить её было нечем.
-         Теперь override каждого человека дополняется его более свежими полями
-         из личных слоёв (ou_profile_<id>, аккаунт в ou_users). */
-      {
-        const ov = mergeObjByKey('ou_people_overrides',
-          (merged.ou_people_overrides && typeof merged.ou_people_overrides === 'object') ? merged.ou_people_overrides : {},
-          (cloud.ou_people_overrides && typeof cloud.ou_people_overrides === 'object') ? cloud.ou_people_overrides : {});
-        [merged, cloud].forEach((src) => {
-          Object.keys(ov).forEach((pid) => {
-            const layers = [];
-            try {
-              const pr = src['ou_profile_' + pid];
-              if (pr && typeof pr === 'object') layers.push(pr);
-              const us = src.ou_users;
-              const arr = Array.isArray(us) ? us : (us ? Object.values(us) : []);
-              const acc = arr.find((u) => u && String(u.id) === String(pid));
-              if (acc && acc.photo) layers.push({ photo: acc.photo, _ts: acc._ts });
-            } catch (e) {}
-            layers.forEach((layer) => {
-              Object.keys(layer).forEach((f) => {
-                if (f === '_ts' || f === 'id') return;
-                if (layer[f] == null || layer[f] === '') return;
-                if (ov[pid][f] == null || ov[pid][f] === '' || (layer._ts || 0) >= (ov[pid]._ts || 0)) {
-                  ov[pid][f] = layer[f];
-                }
-              });
-              if ((layer._ts || 0) > (ov[pid]._ts || 0)) ov[pid]._ts = layer._ts;
-            });
-          });
-        });
-        merged.ou_people_overrides = ov;
-      }
-      /* ФОТО ПРОФИЛЕЙ — общий синхронизируемый слой. Собираем фото каждого
-         человека из ВСЕХ известных мест (ou_people_photos, ou_people_overrides,
-         ou_profile_<id>, ou_users) и берём самое свежее по _ts. Так аватарку
-         гарантированно видят все коллеги, даже если часть слоёв потерялась. */
-      {
-        const phArr = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
-        const collectPhotos = (src) => {
-          const best = {};
-          const put = (id, url, ts) => {
-            if (id == null || !url || typeof url !== 'string') return;
-            const k = String(id);
-            const t = ts || 0;
-            if (!best[k] || t >= best[k]._ts) best[k] = { photo: url, _ts: t };
-          };
-          phArr(src.ou_people_photos).forEach((x) => x && put(x.id, x.photo, x._ts));
-          Object.keys(src.ou_people_overrides || {}).forEach((pid) => {
-            const o = src.ou_people_overrides[pid];
-            if (o && o.photo) put(pid, o.photo, o._ts);
-          });
-          Object.keys(src).forEach((k) => {
-            if (k.indexOf('ou_profile_') === 0) {
-              const p = src[k];
-              if (p && p.photo) put(k.slice('ou_profile_'.length), p.photo, p._ts);
-            }
-          });
-          phArr(src.ou_users).forEach((u) => u && u.photo && put(u.id, u.photo, u._ts));
-          return best;
-        };
-        const localPhotos = collectPhotos(this.readLocal());
-        const cloudPhotos = collectPhotos(cloud);
-        const photoMerged = [];
-        new Set([].concat(Object.keys(localPhotos), Object.keys(cloudPhotos))).forEach((id) => {
-          const a = localPhotos[id], b = cloudPhotos[id];
-          let pick = a && b ? ((b._ts >= a._ts) ? b : a) : (a || b);
-          /* фото из override'а человека — authoritative, если оно не старее слоя */
-          const o = merged.ou_people_overrides[id];
-          if (o && o.photo && (o._ts || 0) >= (pick ? pick._ts : -1)) {
-            pick = { photo: o.photo, _ts: (o._ts || 0) };
-          }
-          if (pick && pick.photo) {
-            photoMerged.push({ id: /^\d+$/.test(id) ? Number(id) : id, photo: pick.photo, _ts: pick._ts || _ts() });
-          }
-        });
-        merged.ou_people_photos = photoMerged;
-      }
-      this.writeAll(applyMessageDeletes(applyUserDeletes(merged)));
-      this.schedulePush();
-    } catch (e) { /* офлайн */ }
-  },
-  schedulePush() {
-    if (this.silent) return;
-    clearTimeout(this.timer);
-    this.timer = setTimeout(() => this.push(), 700);
-  },
-  /* слияние локального состояния с облаком: общие списки — из облака,
-     а фото профилей и правки людей сливаются ПО ЛЮДЯМ (по _ts), чтобы
-     браузер, ушедший в облако последним, не затёр аватарки коллег */
   reconcile(local, cloud) {
     let merged = mergeState(local, cloud);
     ['ou_users', 'ou_departments'].forEach((k) => {
@@ -368,7 +271,14 @@ const LocalUsers = {
   list() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch (e) { return []; } },
   deleted() { try { return JSON.parse(localStorage.getItem(this.DEL)) || []; } catch (e) { return []; } },
   add(u) { u._ts = _ts(); const l = this.list(); l.push(u); localStorage.setItem(this.KEY, JSON.stringify(l)); },
-  findByEmail(email) { return this.list().find((u) => u.email === email); },
+  /* поиск по email — БЕЗ УЧЁТА РЕГИСТРА: «Иванов@mail.ru» и «ivanov@mail.ru» —
+     один и тот же адрес. Сравнение идёт по всей базе (локальной + облачной),
+     поэтому зарегистрировать второй аккаунт на занятую почту нельзя. */
+  normEmail(email) { return String(email || '').trim().toLowerCase(); },
+  findByEmail(email) {
+    const e = this.normEmail(email);
+    return this.list().find((u) => this.normEmail(u.email) === e);
+  },
   byId(id) { return this.list().find((u) => u.id === id); },
   update(id, patch) {
     patch._ts = _ts();
@@ -516,6 +426,18 @@ const LocalMessages = {
   }
 };
 
+/* ---------- ВРЕМЕННАЯ МЕТКА УСТАНОВКИ АККАУНТА ----------
+   Нужна для корректных уведомлений: сообщения и запросы из общей облачной
+   базы, созданные ДО появления аккаунта, не должны считаться непрочитанными.
+   Ставится один раз при регистрации (в момент создания аккаунта), хранится
+   как обычный синхронизируемый ключ ou_ (переживает чистку кэша браузера). */
+const UserInstalled = {
+  key: () => 'ou_installed_' + USER.id,
+  get() { return +(localStorage.getItem(this.key()) || 0); },
+  set(ts) { localStorage.setItem(this.key(), String(ts)); }
+};
+window.UserInstalled = UserInstalled;
+
 /* демо-аккаунт */
 (function seedUsers() {
   const list = LocalUsers.list();
@@ -604,7 +526,8 @@ const LocalTranslations = {
 const LocalRequests = {
   KEY: 'ou_local_requests',
   list() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch (e) { return []; } },
-  add(rec) { rec._ts = _ts(); const l = this.list(); l.push(rec); localStorage.setItem(this.KEY, JSON.stringify(l)); }
+  add(rec) { rec._ts = _ts(); const l = this.list(); l.push(rec); localStorage.setItem(this.KEY, JSON.stringify(l)); },
+  nextId(existingMax) { return Math.max(existingMax || 0, ...this.list().map((r) => r.id)) + 1; }
 };
 
 const LocalCheckReviews = {
@@ -635,24 +558,41 @@ const LocalComplaints = {
   }
 };
 
-/* ---------- УВЕДОМЛЕНИЯ (непрочитанные: чаты, запросы, публикации) ---------- */
+/* ---------- УВЕДОМЛЕНИЯ (непрочитанные: чаты, запросы, публикации) ----------
+   Все счётчики считаются ТОЛЬКО по реальным данным и только по тем элементам,
+   которые адресованы текущему пользователю ИЛИ созданы после появления его
+   аккаунта (_since). Раньше «запросы» считались как «все чужие запросы в базе» —
+   из-за этого у нового пользователя с пустыми чатами были уведомления. */
 const Notifications = {
   _get(k) { try { return JSON.parse(localStorage.getItem(k)) || {}; } catch (e) { return {}; } },
   _set(k, o) { localStorage.setItem(k, JSON.stringify(o)); },
+  /* порог «новизны» для текущего аккаунта: время регистрации; если метки нет
+     (аккаунт создан раньше) — берём _ts записи пользователя или время входа */
+  _since() {
+    if (typeof USER === 'undefined' || USER.guest) return 0;
+    let t = 0;
+    try { t = UserInstalled.get(); } catch (e) {}
+    if (!t) { try { t = +(LocalUsers.byId(USER.id) && LocalUsers.byId(USER.id)._ts) || 0; } catch (e) {} }
+    if (!t) { t = Date.now(); try { UserInstalled.set(t); } catch (e) {} }
+    return t;
+  },
   /* --- чаты: m.seen = отметка времени последнего просмотра диалога --- */
   unreadChats() {
     if (typeof USER === 'undefined' || USER.guest) return 0;
     const seen = this._get('ou_seen_chats_' + USER.id);
     let n = 0;
     LocalMessages.list().forEach((m) => {
-      if (m.to === USER.id && (m._ts || 0) > (seen[m.from] || 0)) n++;
+      if (m.to !== USER.id) return;                       /* только ЛИЧНО мне */
+      if ((m._ts || 0) < this._since()) return;           /* не старое моего аккаунта */
+      if ((m._ts || 0) > (seen[m.from] || 0)) n++;
     });
     return n;
   },
   chatUnreadFrom(pid) {
     if (typeof USER === 'undefined' || USER.guest) return 0;
+    const since = this._since();
     const seen = this._get('ou_seen_chats_' + USER.id)[pid] || 0;
-    return LocalMessages.list().filter((m) => m.to === USER.id && m.from === pid && (m._ts || 0) > seen).length;
+    return LocalMessages.list().filter((m) => m.to === USER.id && m.from === pid && (m._ts || 0) >= since && (m._ts || 0) > seen).length;
   },
   markChatSeen(pid) {
     if (typeof USER === 'undefined' || USER.guest) return;
@@ -682,24 +622,35 @@ const Notifications = {
     this._set(k, o);
     if (window.OU_badges) window.OU_badges.refresh();
   },
-  /* --- запросы: r.seenBy = список id просмотревших --- */
+  /* --- запросы: r.seenBy = список id просмотревших.
+         Непрочитанным считается ТОЛЬКО запрос, адресованный лично мне
+         (assignee/me = мой id или short) либо созданный после регистрации
+         моего аккаунта. Публичные запросы других пользователей не должны
+         создавать уведомлений новым участникам. --- */
+  _requestForMe(r, since) {
+    if (r.author === USER.id) return false;                       /* свой запрос — не уведомление */
+    const targets = [].concat(r.assignee || [], r.me || [], r.to || []);
+    if (targets.some((t) => String(t) === String(USER.id) || (typeof t === 'string' && t === USER.short))) return true;
+    return (r._ts || 0) >= since;                                 /* новые запросы — с момента регистрации */
+  },
   unreadRequests() {
     if (typeof USER === 'undefined' || USER.guest) return 0;
+    const since = this._since();
     let n = 0;
     (Store.requests || []).forEach((r) => {
-      if (r.by !== USER.id && !(r.seenBy || []).includes(USER.id)) n++;
+      if (!this._requestForMe(r, since)) return;
+      if (!(r.seenBy || []).includes(USER.id)) n++;
     });
     return n;
   },
   markRequestsSeen() {
     if (typeof USER === 'undefined' || USER.guest || !Store.requests) return;
-    let ch = false;
+    const since = this._since();
     Store.requests.forEach((r) => {
-      if (r.by === USER.id) return;
+      if (!this._requestForMe(r, since)) return;
       if (!(r.seenBy || []).includes(USER.id)) {
         r.seenBy = (r.seenBy || []).concat([USER.id]);
         LocalRequestPatch.update(r.id, { seenBy: r.seenBy });
-        ch = true;
       }
     });
     if (window.OU_badges) window.OU_badges.refresh();
@@ -707,10 +658,12 @@ const Notifications = {
   /* --- публикации: p.seenBy (для соавторов, не автора) --- */
   unreadPubs() {
     if (typeof USER === 'undefined' || USER.guest) return 0;
+    const since = this._since();
     let n = 0;
     (Store.pubs || []).forEach((p) => {
       if (!p.authors || !p.authors.includes(USER.short)) return;
       if (p.by === USER.id) return;
+      if ((p._ts || 0) < since) return;                           /* не старое моего аккаунта */
       if (!(p.seenBy || []).includes(USER.id)) n++;
     });
     return n;

@@ -36,13 +36,7 @@ async function inflateBytes(bytes) {
         return new Uint8Array(ab);
     } catch (e) { return null; }
 }
-async function rawInflate(bytes) {
-    try {
-        var ds = new DecompressionStream('deflate-raw');
-        var ab = await new Response(new Blob([bytes]).stream().pipeThrough(ds)).arrayBuffer();
-        return new Uint8Array(ab);
-    } catch (e) { return null; }
-}
+
 
 /* нормализация «мусора» после извлечения: склейка букв через пробел,
    сжатие повторяющихся знаков, обрезка длины */

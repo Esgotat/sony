@@ -310,7 +310,6 @@ document.getElementById('subnav').innerHTML = `
    повторный тап по той же кнопке ведёт на страницу раздела.
    Определяем тач-режим в момент инициализации обработчиков (не при загрузке). */
 function isTouchNav() { return matchMedia('(hover: none)').matches || innerWidth <= 640; }
-const SECTION_PAGES = { 'Кафедры': 'kafedry.html', 'Публикации': 'publications.html', 'Коллеги': 'znakomye.html?mode=all', 'Запросы': 'requests.html' };
 function initDropdown(rootSel, wrapCls, btnCls, hrefs) {
     const wraps = Array.prototype.slice.call(document.querySelectorAll(rootSel + ' .' + wrapCls));
     function closeAll(except) {
@@ -400,6 +399,9 @@ window.OU_badges = (function () {
     }
     function refresh() {
         if (typeof USER === 'undefined' || USER.guest) return;
+        /* Store ещё не загружен — счётчики по реальным данным посчитать нельзя,
+           бейджи остаются скрытыми до события 'ou:data' */
+        if (typeof Store === 'undefined' || !Store.requests) return;
         let c = 0, r = 0, p = 0;
         try { c = Notifications.unreadChats(); } catch (e) {}
         try { r = Notifications.unreadRequests(); } catch (e) {}
