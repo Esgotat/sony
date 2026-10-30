@@ -30,38 +30,8 @@
         <label class="fld"><span>Email</span><input id="lEmail" type="email" required></label>
         <label class="fld"><span>Пароль</span><input id="lPass" type="password" required></label>
         <div class="form-actions"><button class="file-btn" type="submit">Войти</button></div>
-        <p class="person-years">Нет аккаунта? <a href="login.html?mode=reg">Зарегистрируйтесь</a></p>
+        <p class="person-years">Нет аккаунта? <a href="register.html">Зарегистрируйтесь</a></p>
         <p class="conflict-note">Демо-аккаунты: andreev@ou.ru · 1234 / admin@ou.ru · admin</p>
-      </form>
-
-      <form id="regForm" class="pub-form auth-form" hidden>
-        <h2 class="form-sub">Регистрация</h2>
-        <label class="fld"><span>ФИО (фамилия имя отчество)</span><input id="rName" required placeholder="Иванов Иван Иванович"></label>
-        <div class="fld-row">
-          <label class="fld"><span>Email</span><input id="rEmail" type="email" required></label>
-          <label class="fld"><span>Пароль</span><input id="rPass" type="password" required minlength="4"></label>
-        </div>
-        <div class="fld-row">
-          <div class="fld">
-            <span>Кафедра (необязательно)</span>
-            <select class="select" id="rDept">
-              <option value="">— без кафедры —</option>
-            </select>
-          </div>
-          <div class="fld">
-            <span>Степень (необязательно)</span>
-            <select class="select" id="rDeg">
-              <option value="">— без степени —</option>
-              <option value="d">Доктор наук</option>
-              <option value="k">Кандидат наук</option>
-              <option value="a">Аспирант</option>
-            </select>
-          </div>
-        </div>
-        <label class="fld"><span>Должность (необязательно)</span><input id="rNote" placeholder="Доцент"></label>
-        <div class="fld"><span>Роли в университете (необязательно)</span><div class="check-list" id="rRoles"></div></div>
-        <div class="form-actions"><button class="file-btn" type="submit">Создать аккаунт</button></div>
-        <p class="person-years">Уже есть аккаунт? <a href="login.html">Войти</a></p>
       </form>
     </div>
   </main>

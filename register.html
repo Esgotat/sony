@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Регистрация — Open University</title>
+<meta name="description" content="Регистрация аккаунта в Open University.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎓</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/pages.css?v=28">
+</head>
+<body data-page="auth">
+
+<header class="hd" id="hd"></header>
+
+<div class="frame">
+  <nav class="subnav" id="subnav" aria-label="Разделы"></nav>
+
+  <main class="content">
+    <div class="page-head">
+      <h1 class="page-title">Аккаунт</h1>
+    </div>
+
+    <div class="auth-wrap">
+      <form id="regForm" class="pub-form auth-form">
+        <h2 class="form-sub">Регистрация</h2>
+        <label class="fld"><span>ФИО (фамилия имя отчество)</span><input id="rName" required placeholder="Иванов Иван Иванович"></label>
+        <div class="fld-row">
+          <label class="fld"><span>Email</span><input id="rEmail" type="email" required></label>
+          <label class="fld"><span>Пароль</span><input id="rPass" type="password" required minlength="4"></label>
+        </div>
+        <div class="fld-row">
+          <div class="fld">
+            <span>Кафедра (необязательно)</span>
+            <select class="select" id="rDept">
+              <option value="">— без кафедры —</option>
+            </select>
+          </div>
+          <div class="fld">
+            <span>Степень (необязательно)</span>
+            <select class="select" id="rDeg">
+              <option value="">— без степени —</option>
+              <option value="d">Доктор наук</option>
+              <option value="k">Кандидат наук</option>
+              <option value="a">Аспирант</option>
+            </select>
+          </div>
+        </div>
+        <label class="fld"><span>Должность (необязательно)</span><input id="rNote" placeholder="Доцент"></label>
+        <div class="fld"><span>Роли в университете (необязательно)</span><div class="check-list" id="rRoles"></div></div>
+        <div class="form-actions"><button class="file-btn" type="submit">Создать аккаунт</button></div>
+        <p class="person-years">Уже есть аккаунт? <a href="login.html">Войти</a></p>
+      </form>
+    </div>
+  </main>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/store.js?v=5"></script>
+<script src="js/icons.js?v=5"></script>
+<script src="js/layout.js?v=6"></script>
+<script src="js/extract.js?v=1"></script>
+<script src="js/app.js?v=14"></script>
+</body>
+</html>

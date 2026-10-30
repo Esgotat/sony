@@ -1617,11 +1617,17 @@ function initNewRequest() {
 // ВХОД / РЕГИСТРАЦИЯ
 // ============================================================
 function initAuth() {
-    const reg = params.get('mode') === 'reg';
-    $('#loginForm').hidden = reg;
-    $('#regForm').hidden = !reg;
-    const demoHint = $('#loginForm .conflict-note');
-    if (demoHint) demoHint.remove();
+    /* страница входа: login.html · страница регистрации: register.html */
+    const loginF = $('#loginForm'), regF = $('#regForm');
+    if (loginF) {
+        loginF.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = LocalUsers.findByEmail($('#lEmail').value.trim().toLowerCase());
+            if (!u || u.pass !== hashPass($('#lPass').value)) { alert('Неверный email или пароль.'); return; }
+            Session.set(u.id); location.href = 'profile.html?id=' + u.id;
+        });
+    }
+    if (!regF) return;
     $('#rDept').innerHTML = '<option value="">— без кафедры —</option>' + DEPTS.map((d) => '<option value="' + d.n + '">' + esc(d.t) + '</option>').join('');
     $('#rRoles').innerHTML = Object.entries(ROLES).filter(([k]) => k !== 'adm').map(([k, r]) =>
         '<label><input type="checkbox" value="' + k + '"' + (k === 'res' ? ' checked' : '') + '> ' + esc(r.label) + '</label>').join('');
@@ -1632,13 +1638,7 @@ function initAuth() {
         $('.auth-wrap').insertBefore(note, $('.auth-wrap').firstChild);
         $('#doLogout').addEventListener('click', (e) => { e.preventDefault(); Session.clear(); location.href = 'login.html'; });
     }
-    $('#loginForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const u = LocalUsers.findByEmail($('#lEmail').value.trim().toLowerCase());
-        if (!u || u.pass !== hashPass($('#lPass').value)) { alert('Неверный email или пароль.'); return; }
-        Session.set(u.id); location.href = 'profile.html?id=' + u.id;
-    });
-    $('#regForm').addEventListener('submit', (e) => {
+    regF.addEventListener('submit', (e) => {
         e.preventDefault();
         const name = $('#rName').value.trim();
         const email = $('#rEmail').value.trim().toLowerCase();
