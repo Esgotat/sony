@@ -1525,11 +1525,14 @@ section.cards-depts .card.dept-card {
   border: none;
   /* КЛЮЧЕВОЕ: фон полностью ПРОЗРАЧНЫЙ (альфа 0.07–0.14) — сквозь
      карточку отлично видно фон страницы; rgba(--facet-rgb) даёт мягкий
-     цветной «свет» сверху, полупрозрачный чёрный — лёгкое затемнение. */
+     цветной «свет» сверху, полупрозрачный тон темы — лёгкое затемнение.
+     ВАЖНО: вместо rgba(0,0,0,...) используется color-mix от var(--ink):
+     в тёмных темах --ink светлый, поэтому «затемнение» становится едва
+     заметным СВЕТЛЫМ вуалем — тема продолжает работать корректно. */
   background-color: transparent !important;
   background-image: linear-gradient(150deg,
       rgba(var(--facet-rgb, 128, 128, 128), 0.14) 0%,
-      rgba(0, 0, 0, 0.07) 100%) !important;
+      color-mix(in srgb, var(--ink, #211F1A) 7%, transparent) 100%) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   overflow: hidden;    /* всё содержимое аккуратно обрезается по скруглению */
@@ -1562,7 +1565,7 @@ body[data-page="kafedry"] .cards-depts .card.dept-card,
   background-color: transparent !important;
   background-image: linear-gradient(150deg,
       rgba(var(--facet-rgb, 128, 128, 128), 0.14) 0%,
-      rgba(0, 0, 0, 0.07) 100%) !important;
+      color-mix(in srgb, var(--ink, #211F1A) 7%, transparent) 100%) !important;
   border: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
   overflow: hidden;
@@ -1710,8 +1713,8 @@ section.cards-depts .card.dept-card .card-veil {
   background-color: transparent !important;
   background-image: linear-gradient(150deg,
       rgba(var(--facet-rgb, 128, 128, 128), 0.10) 0%,
-      rgba(0, 0, 0, 0.06) 100%) !important;
-  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.06);
+      color-mix(in srgb, var(--ink, #211F1A) 6%, transparent) 100%) !important;
+  box-shadow: inset 3px 0 8px color-mix(in srgb, var(--ink, #211F1A) 6%, transparent);
   /* стеклянный эффект: слегка размываем то, что просвечивает сквозь карточку */
   backdrop-filter: blur(2px) saturate(1.1);
   -webkit-backdrop-filter: blur(2px) saturate(1.1);
@@ -1727,8 +1730,8 @@ html[data-theme='emerald'] section.cards-depts .card.dept-card .card-veil {
   background-color: transparent !important;
   background-image: linear-gradient(150deg,
       rgba(var(--facet-rgb, 128, 128, 128), 0.10) 0%,
-      rgba(0, 0, 0, 0.10) 100%) !important;
-  box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.25);
+      color-mix(in srgb, var(--ink, #E8E6E1) 9%, transparent) 100%) !important;
+  box-shadow: inset 3px 0 8px color-mix(in srgb, var(--ink, #E8E6E1) 18%, transparent);
 }
 /* содержимое — поверх обоих слоёв */
 section.cards-depts .card.dept-card .card-emoji,
