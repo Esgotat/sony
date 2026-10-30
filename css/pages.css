@@ -1489,11 +1489,10 @@ color: rgba(255, 255, 255, 0.6);
 
 /* ============================================================
    КАФЕДРЫ: карточки-визитки.
-   ФОН КАРТОЧКИ — ЗАТЕМНЁННО-ПРОЗРАЧНЫЙ С ОТТЕНКОМ НАУКИ:
-   сквозь него всё ещё виден фон страницы, но притемнённый
-   (rgba(0,0,0,.38)) и подсвеченный цветом своей дисциплины
-   (--facet-rgb → мягкий цветной свет сверху, --facet-deep →
-   более насыщенный тон снизу).
+   ФОН КАРТОЧКИ — ПРОЗРАЧНЫЙ С ЛЁГКИМ ЗАТЕМНЕНИЕМ И ОТТЕНКОМ НАУКИ:
+   сквозь него хорошо виден фон страницы (альфа 0.12–0.22), он лишь
+   слегка притемнён и подсвечен цветом своей дисциплины (--facet-rgb →
+   мягкий цветной свет сверху, полупрозрачный чёрный → затемнение снизу).
    Под текстом лежит полупрозрачная «бумажная» подложка
    (.card-veil) — тоже с оттенком науки, но заметно светлее,
    чтобы буквы оставались читаемыми.
@@ -1508,7 +1507,7 @@ section.cards-depts {
   gap: 20px;
 }
 
-/* карточка: затемнённо-прозрачный фон с оттенком науки */
+/* карточка: прозрачный фон с лёгким затемнением и оттенком науки */
 section.cards-depts .card.dept-card {
   position: relative;
   display: flex;
@@ -1521,13 +1520,14 @@ section.cards-depts .card.dept-card {
   min-height: 0;
   border-radius: 16px;
   border: none;
-  /* КЛЮЧЕВОЕ: фон полупрозрачный + затемнение + оттенок своей науки.
-     rgba(--facet-rgb) даёт цветной «свет» сверху, --facet-deep — более
-     насыщенный тон снизу; альфа < 1 оставляет фон страницы просвечивать. */
-  background-color: rgba(0, 0, 0, 0.38) !important;
+  /* КЛЮЧЕВОЕ: фон ПРОЗРАЧНЫЙ — слегка затемнённый + оттенок своей науки.
+     Альфа маленькая (0.12–0.22), поэтому сквозь карточку хорошо видно
+     фон страницы; rgba(--facet-rgb) даёт мягкий цветной «свет» сверху,
+     полупрозрачный чёрный — лёгкое затемнение снизу. */
+  background-color: rgba(0, 0, 0, 0.12) !important;
   background-image: linear-gradient(150deg,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.45) 0%,
-      var(--facet-deep, #5a5a5a) 100%) !important;
+      rgba(var(--facet-rgb, 128, 128, 128), 0.22) 0%,
+      rgba(0, 0, 0, 0.20) 100%) !important;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
   transition: transform 0.25s ease, box-shadow 0.25s ease;
   overflow: visible;   /* тень при наведении должна быть видна вокруг */
@@ -1557,10 +1557,10 @@ section.cards-depts .card.dept-card .card-glass { display: none !important; }
 .cards .card.dept-card,
 body[data-page="kafedry"] .cards-depts .card.dept-card,
 .home-block .cards-depts .card.dept-card {
-  background-color: rgba(0, 0, 0, 0.38) !important;
+  background-color: rgba(0, 0, 0, 0.12) !important;
   background-image: linear-gradient(150deg,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.45) 0%,
-      var(--facet-deep, #5a5a5a) 100%) !important;
+      rgba(var(--facet-rgb, 128, 128, 128), 0.22) 0%,
+      rgba(0, 0, 0, 0.20) 100%) !important;
   border: none;
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12) !important;
   overflow: visible;
@@ -1685,10 +1685,10 @@ section.cards-depts .card.dept-card .stat .b {
 }
 /* ============================================================
    ПОДЛОЖКА ПОД ТЕКСТОМ (.card-veil).
-   Фон карточки — затемнённо-прозрачный с оттенком науки, поэтому
-   подложка под текстом тоже полупрозрачная: «бумажный» цвет темы
-   (--bg-2 → --veil-rgb) на 0.86 + сверху оттенок той же науки,
-   чтобы тон карточки читался и под текстом. Буквы остаются контрастными.
+   Она ПО-НАСТОЯЩЕМУ ПРОЗРАЧНАЯ: сквозь неё видно фон страницы.
+   Только лёгкая вуаль — «бумажный» цвет темы (--veil-rgb) на 0.25
+   плюс оттенок той же науки (--facet-rgb), и мягкое размытие
+   (backdrop-filter), чтобы текст читался поверх «просвечивающего» фона.
    Слои, снизу вверх: 1 — фон .dept-card; 2 — span.card-veil;
    3 — аватарка и текст.
    ============================================================ */
@@ -1700,25 +1700,28 @@ section.cards-depts .card.dept-card .card-veil {
   pointer-events: none;
   /* форма подложки: прямоугольник со скруглением со стороны текста */
   border-radius: 0 16px 16px 0;
-  background-color: rgba(247, 242, 229, 0.86); /* резерв = --bg-2 классики */
-  background-color: rgba(var(--veil-rgb, 247, 242, 229), 0.86) !important;
+  background-color: rgba(247, 242, 229, 0.25); /* резерв = --bg-2 классики */
+  background-color: rgba(var(--veil-rgb, 247, 242, 229), 0.25) !important;
   background-image: linear-gradient(150deg,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.14) 0%,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.30) 100%) !important;
+      rgba(var(--facet-rgb, 128, 128, 128), 0.10) 0%,
+      rgba(var(--facet-rgb, 128, 128, 128), 0.22) 100%) !important;
   box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.10);
+  /* стеклянный эффект: размываем то, что просвечивает сквозь карточку */
+  backdrop-filter: blur(2px) saturate(1.1);
+  -webkit-backdrop-filter: blur(2px) saturate(1.1);
 }
-/* в тёмных темах подложка плотнее (0.92), а оттенок науки — только лёгкий,
-   чтобы текст не терял контраст на тёмном фоне */
+/* в тёмных темах вуаль чуть плотнее (0.3), но всё равно прозрачная,
+   а оттенок науки — только лёгкий, чтобы текст не терял контраст */
 html[data-dark] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='dark']  section.cards-depts .card.dept-card .card-veil,
 html[data-theme='night'] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='oxford'] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='burgundy'] section.cards-depts .card.dept-card .card-veil,
 html[data-theme='emerald'] section.cards-depts .card.dept-card .card-veil {
-  background-color: rgba(var(--veil-rgb, 26, 26, 26), 0.92) !important;
+  background-color: rgba(var(--veil-rgb, 26, 26, 26), 0.30) !important;
   background-image: linear-gradient(150deg,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.10) 0%,
-      rgba(var(--facet-rgb, 128, 128, 128), 0.20) 100%) !important;
+      rgba(var(--facet-rgb, 128, 128, 128), 0.08) 0%,
+      rgba(var(--facet-rgb, 128, 128, 128), 0.18) 100%) !important;
   box-shadow: inset 3px 0 8px rgba(0, 0, 0, 0.35);
 }
 /* содержимое — поверх обоих слоёв */
