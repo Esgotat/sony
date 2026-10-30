@@ -17,7 +17,7 @@ const esc = (s) => String(s == null ? '' : s)
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 window.OU_esc = esc;   /* для js/extract.js (рендер первой страницы файла) */
 
-    function shortenName(name, maxLen = 28) {
+function shortenName(name, maxLen = 28) {
   if (!name || name.length <= maxLen) return name;
   const parts = name.trim().split(/\s+/);
   if (parts.length < 3) return name;
@@ -159,7 +159,6 @@ function deptLabel(p) {
     return d ? { fac: d.f, title: d.t } : { fac: 'Без кафедры', title: 'Кафедра не найдена' };
 }
 
-const ROLE_COLOR = { rev: 'var(--bd)', res: 'var(--bk)', sup: 'var(--ba)', trn: '#3E6C8E', adm: '#6B2D5C' };
 
 function personCard(p) {
   const lab = deptLabel(p);
@@ -1603,6 +1602,7 @@ function initNewRequest() {
             if ((Store.requests || []).some((r) => r.type === 'check' && r.pubId === pubId && !r._done)) { alert('Проверка уже идёт.'); return; }
             base.pubId = pubId; base.need = +$('#qNeed').value; base.cost = base.need; base.reviews = [];
         }
+        base.id = LocalRequests.nextId(Math.max(0, ...(Store.requests || []).map((r) => r.id)));
         LocalRequests.add(base); location.reload();
     });
     const mine = (Store.requests || []).filter((r) => r.author === USER.id).sort((a, b) => (b.date || '').localeCompare(a.date || ''));
@@ -1617,11 +1617,17 @@ function initNewRequest() {
 // ВХОД / РЕГИСТРАЦИЯ
 // ============================================================
 function initAuth() {
-    const reg = params.get('mode') === 'reg';
-    $('#loginForm').hidden = reg;
-    $('#regForm').hidden = !reg;
-    const demoHint = $('#loginForm .conflict-note');
-    if (demoHint) demoHint.remove();
+    /* страница входа: login.html · страница регистрации: register.html */
+    const loginF = $('#loginForm'), regF = $('#regForm');
+    if (loginF) {
+        loginF.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = LocalUsers.findByEmail($('#lEmail').value);
+            if (!u || u.pass !== hashPass($('#lPass').value)) { alert('Неверный email или пароль.'); return; }
+            Session.set(u.id); location.href = 'profile.html?id=' + u.id;
+        });
+    }
+    if (!regF) return;
     $('#rDept').innerHTML = '<option value="">— без кафедры —</option>' + DEPTS.map((d) => '<option value="' + d.n + '">' + esc(d.t) + '</option>').join('');
     $('#rRoles').innerHTML = Object.entries(ROLES).filter(([k]) => k !== 'adm').map(([k, r]) =>
         '<label><input type="checkbox" value="' + k + '"' + (k === 'res' ? ' checked' : '') + '> ' + esc(r.label) + '</label>').join('');
@@ -1632,32 +1638,49 @@ function initAuth() {
         $('.auth-wrap').insertBefore(note, $('.auth-wrap').firstChild);
         $('#doLogout').addEventListener('click', (e) => { e.preventDefault(); Session.clear(); location.href = 'login.html'; });
     }
-    $('#loginForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const u = LocalUsers.findByEmail($('#lEmail').value.trim().toLowerCase());
-        if (!u || u.pass !== hashPass($('#lPass').value)) { alert('Неверный email или пароль.'); return; }
-        Session.set(u.id); location.href = 'profile.html?id=' + u.id;
-    });
-    $('#regForm').addEventListener('submit', (e) => {
+    regF.addEventListener('submit', (e) => {
         e.preventDefault();
         const name = $('#rName').value.trim();
-        const email = $('#rEmail').value.trim().toLowerCase();
+        const email = LocalUsers.normEmail($('#rEmail').value);
         const pass = $('#rPass').value;
         if (name.split(' ').length < 2) { alert('Укажите ФИО.'); return; }
-        if (LocalUsers.findByEmail(email)) { alert('Email уже занят.'); return; }
-        const words = name.split(' ');
-        const short = words[0] + ' ' + (words[1] ? words[1][0] + '.' : '') + (words[2] ? ' ' + words[2][0] + '.' : '');
-        const existingMax = Math.max(0, ...Store.people.map((p) => p.id).filter((v) => v < 90000));
-        const id = LocalUsers.nextId(existingMax);
-        const deptVal = $('#rDept').value;
-        const degVal = $('#rDeg').value;
-        LocalUsers.add({
-            id: id, name: name, short: short, email: email, pass: hashPass(pass),
-            dept: deptVal === '' ? null : +deptVal, deg: degVal === '' ? null : degVal,
-            roles: Array.from($('#rRoles').querySelectorAll('input:checked')).map((i) => i.value),
-            note: $('#rNote').value.trim() || 'Участник', years: 0, balance: 5, interests: [], experience: ''
+        /* ОДИН АККАУНТ НА ПОЧТУ: проверка по локальной базе (в неё попадает
+           весь общий список пользователей из облака Firebase) + контрольный
+           запрос напрямую в облако, если локальная база ещё не успела
+           синхронизироваться. Повторная регистрация на тот же email блокируется. */
+        if (LocalUsers.findByEmail(email)) { alert('Пользователь с такой почтой уже зарегистрирован. Войдите в аккаунт.'); return; }
+        const btn = regF.querySelector('button[type="submit"]');
+        if (btn) btn.disabled = true;
+        FBApi.get('/state/ou_users').then((cloud) => {
+            const arr = Array.isArray(cloud) ? cloud : (cloud && typeof cloud === 'object' ? Object.values(cloud) : []);
+            const taken = arr.some((u) => u && LocalUsers.normEmail(u.email) === email);
+            if (!taken && !LocalUsers.findByEmail(email)) {
+                const words = name.split(' ');
+                const short = words[0] + ' ' + (words[1] ? words[1][0] + '.' : '') + (words[2] ? ' ' + words[2][0] + '.' : '');
+                const existingMax = Math.max(0, ...Store.people.map((p) => p.id).filter((v) => v < 90000));
+                const id = LocalUsers.nextId(existingMax);
+                const deptVal = $('#rDept').value;
+                const degVal = $('#rDeg').value;
+                const now = _ts();
+                LocalUsers.add({
+                    id: id, name: name, short: short, email: email, pass: hashPass(pass),
+                    dept: deptVal === '' ? null : +deptVal, deg: degVal === '' ? null : degVal,
+                    roles: Array.from($('#rRoles').querySelectorAll('input:checked')).map((i) => i.value),
+                    note: $('#rNote').value.trim() || 'Участник', years: 0, balance: 5, interests: [], experience: ''
+                });
+                Session.set(id);
+                /* метка времени создания аккаунта: уведомления считаются только
+                   по данным, появившимся после регистрации (пустой чат = 0 бейджей) */
+                try { localStorage.setItem('ou_installed_' + id, String(now)); } catch (err) {}
+                location.href = 'profile.html?id=' + id;
+            } else {
+                if (btn) btn.disabled = false;
+                alert('Пользователь с такой почтой уже зарегистрирован. Войдите в аккаунт.');
+            }
+        }).catch(() => {
+            if (btn) btn.disabled = false;
+            alert('Не удалось проверить почту. Проверьте подключение и попробуйте ещё раз.');
         });
-        Session.set(id); location.href = 'profile.html?id=' + id;
     });
 }
 
@@ -2538,6 +2561,9 @@ const INIT = {
 const page = document.body.dataset.page || 'home';
 const loadBox = $('#cards') || $('#staff');
 if (loadBox) loadBox.innerHTML = '<div class="loading">Загрузка…</div>';
+/* Общие данные (в т.ч. пользователи из базы Firebase) сначала подтягиваются
+   из облака внутри Store.loadAll, и только потом запускается код страницы:
+   так аккаунты гарантированно попадают в первый рендер списков коллег. */
 Store.loadAll()
     .then(() => {
         DEPTS = Store.depts.filter((d) => !d.tpl);
