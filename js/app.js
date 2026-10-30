@@ -17,7 +17,7 @@ const esc = (s) => String(s == null ? '' : s)
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 window.OU_esc = esc;   /* для js/extract.js (рендер первой страницы файла) */
 
-    function shortenName(name, maxLen = 28) {
+function shortenName(name, maxLen = 28) {
   if (!name || name.length <= maxLen) return name;
   const parts = name.trim().split(/\s+/);
   if (parts.length < 3) return name;
