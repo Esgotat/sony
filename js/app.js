@@ -43,11 +43,23 @@ function stagger(nodes) {
     if (REDUCED) return;
     nodes.forEach((el, i) => { el.style.animationDelay = Math.min(i * 25, 400) + 'ms'; });
 }
+/* затемнение hex-цвета (коэффициент 0..1) — нужен для «активного» состояния
+   цветных кнопок-фильтров */
+function shadeColor(hex, k) {
+    const h = String(hex || '').replace('#', '');
+    if (!/^[0-9a-f]{6}$/i.test(h)) return hex;
+    const ch = [0, 2, 4].map((i) => Math.round(parseInt(h.substr(i, 2), 16) * k));
+    return '#' + ch.map((x) => x.toString(16).padStart(2, '0')).join('');
+}
 function buildFilters(items, current, onPick) {
     const box = $('#filters');
     if (!box) return;
+    /* it.color — цвет науки: кнопка красится в него (рамка/текст, а в активном
+       состоянии — сплошная заливка). Обычные фильтры без цвета не меняются. */
     box.innerHTML = items
-        .map((it) => '<button class="fbtn' + (it.key === current ? ' on' : '') + '" data-k="' + esc(it.key) + '">' + esc(it.label) + '</button>')
+        .map((it) => '<button class="fbtn' + (it.key === current ? ' on' : '') + '"' +
+            (it.color ? ' style="--fc:' + it.color + ';--fc-deep:' + shadeColor(it.color, 0.72) + '"' : '') +
+            ' data-k="' + esc(it.key) + '">' + esc(it.label) + '</button>')
         .join('');
 
     let touched = false;
@@ -670,7 +682,6 @@ function deptCardHTML(c) {
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
     <div class="card-bottom">
-      <span class="fac">${esc(c.f)}</span>
       <h3 class="card-title">${esc(c.t)}</h3>
       <div class="card-stats">
         <span class="stat"><span class="b b-d">Д</span>${val(s.d)}</span>
@@ -2532,7 +2543,6 @@ function cardHTML(c) {
       ${c.photo ? '<img class="dept-photo avatar-svg" src="' + esc(c.photo) + '" alt="">' : ((window.OU_icons && OU_icons.deptIconHTML) ? OU_icons.deptIconHTML(c) : '')}
     </div>
     <div class="card-bottom">
-      <span class="fac">${esc(c.f)}</span>
       <h3 class="card-title">${esc(c.t)}</h3>
       ${desc ? '<p class="dept-desc">' + esc(desc) + '</p>' : ''}
     </div>
@@ -2547,7 +2557,7 @@ function cardHTML(c) {
         $('#count').textContent = list.length + ' ' + plural(list.length, ['кафедра', 'кафедры', 'кафедр']);
         $('#empty').hidden = list.length !== 0;
     }
-    buildFilters([{ key: 'Все', label: 'Все' }].concat(FAC.map((f) => ({ key: f, label: f }))), state.fac, (k) => { state.fac = k; render(); });
+    buildFilters([{ key: 'Все', label: 'Все' }].concat(FAC.map((f) => ({ key: f, label: f, color: FAC_COLOR[f] }))), state.fac, (k) => { state.fac = k; render(); });
     render();
 }
 

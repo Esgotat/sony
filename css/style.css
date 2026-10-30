@@ -313,6 +313,11 @@ transition: all 0.2s ease;
 }
 .fbtn:hover { background: var(--ink); color: var(--paper); transform: translateY(-1px); }
 .fbtn.on { background: var(--ink); border-color: var(--ink); color: var(--paper); }
+/* цветные кнопки (фильтр «Кафедры»): --fc задаётся инлайн-стилем в app.js.
+   обычный вид — рамка и текст цвета науки, активный — сплошная заливка */
+.fbtn[style*="--fc"] { border-color: var(--fc); color: var(--fc); }
+.fbtn[style*="--fc"]:hover { background: var(--fc); color: #fff; }
+.fbtn[style*="--fc"].on { background: var(--fc-deep, var(--fc)); border-color: var(--fc-deep, var(--fc)); color: #fff; }
 .count {
 margin-left: auto;
 font: 500 11px/1 var(--font-m);

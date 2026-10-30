@@ -24,8 +24,20 @@ const FBApi = {
   }
 };
 
+/* ---------- СИНХРОНИЗИРУЕМЫЕ КЛЮЧИ ----------
+   Всё, что хранится в localStorage с префиксом ou_ и имеет смысл в облаке.
+   ou_session (текущий вход) и ou_cloud_prev (локальный снимок облака) —
+   НЕ синхронизируются никогда: второй раньше попадал в облако вместе со
+   всем состоянием и наращивал бесконечную вложенность (5 МБ за 9 циклов),
+   из-за чего база переставала успевать отдаваться и аккаунты «не грузились». */
+const SYNC_PREFIX = 'ou_';
+const NON_SYNC_KEYS = ['ou_session', 'ou_cloud_prev'];
+function isSyncKey(k) {
+  return typeof k === 'string' && k.indexOf(SYNC_PREFIX) === 0 && NON_SYNC_KEYS.indexOf(k) < 0;
+}
+
 /* ---------- СЛИЯНИЕ СОСТОЯНИЙ ---------- */
-function mergeKeyOf(k, item) {
+function mergeKeyOf(item) {
   if (item == null) return 'null';
   if (typeof item !== 'object') return 'v:' + String(item);
   if (item.id != null) return 'i:' + item.id;
@@ -33,24 +45,43 @@ function mergeKeyOf(k, item) {
   return 'j:' + JSON.stringify(item);
 }
 
-function mergeListByKey(k, a, b) {
+function mergeListByKey(a, b) {
   const m = new Map();
-  (a || []).forEach((x) => m.set(mergeKeyOf(k, x), x));
+  (a || []).forEach((x) => m.set(mergeKeyOf(x), x));
   (b || []).forEach((x) => {
-    const key = mergeKeyOf(k, x);
+    const key = mergeKeyOf(x);
     const ex = m.get(key);
     if (!ex || ((x && x._ts) || 0) > ((ex && ex._ts) || 0)) m.set(key, x);
   });
   return Array.from(m.values());
 }
 
-function mergeObjByKey(k, a, b) {
+/* список-в-объекте: после объезда Firebase REST вместо массива может
+   прийти объект {"0":{...},"1":{...}} или дырявый массив [null,{...}] —
+   приводим к плоскому списку валидных записей. Именно из-за этого шага
+   раньше «пропадали» пользователи: код ждал массив, а получал объект. */
+function asList(v) {
+  if (Array.isArray(v)) return v.filter((x) => x != null);
+  if (v && typeof v === 'object') return Object.keys(v).map((k) => v[k]).filter((x) => x != null);
+  return [];
+}
+
+/* словарь-в-списке: Firebase REST превращает объект {"5":{...}} в массив
+   с дырками и нулями. Возвращаем всегда плоский объект по ключам. */
+function asListOrObj(v) {
+  const o = {};
+  if (Array.isArray(v)) { v.forEach((x, i) => { if (x != null && typeof x === 'object') o[i] = x; }); return o; }
+  if (v && typeof v === 'object') return v;
+  return o;
+}
+
+function mergeObjByKey(a, b) {
   const o = {};
   new Set([].concat(Object.keys(a), Object.keys(b))).forEach((id) => {
     const x = a[id], y = b[id];
     if (x === undefined) { o[id] = y; return; }
     if (y === undefined) { o[id] = x; return; }
-    if (Array.isArray(x) || Array.isArray(y)) { o[id] = mergeListByKey(k, Array.isArray(x) ? x : [], Array.isArray(y) ? y : []); return; }
+    if (Array.isArray(x) || Array.isArray(y)) { o[id] = mergeListByKey(asList(x), asList(y)); return; }
     o[id] = ((y && y._ts) || 0) > ((x && x._ts) || 0) ? y : x;
   });
   return o;
@@ -60,19 +91,19 @@ function mergeState(a, b) {
   const out = {};
   const keys = new Set([].concat(Object.keys(a || {}), Object.keys(b || {})));
   keys.forEach((k) => {
-    if (k === 'ou_session') return;
+    if (!isSyncKey(k)) return;
     const av = a ? a[k] : undefined;
     const bv = b ? b[k] : undefined;
     if (av === undefined) { out[k] = bv; return; }
     if (bv === undefined) { out[k] = av; return; }
-    if (Array.isArray(av) || Array.isArray(bv)) { out[k] = mergeListByKey(k, Array.isArray(av) ? av : [], Array.isArray(bv) ? bv : []); return; }
+    if (Array.isArray(av) || Array.isArray(bv)) { out[k] = mergeListByKey(asList(av), asList(bv)); return; }
     if (typeof av === 'object' && av && typeof bv === 'object' && bv) {
       if (k.indexOf('ou_profile_') === 0) {
         const newer = ((bv && bv._ts) || 0) > ((av && av._ts) || 0) ? bv : av;
         const older = newer === bv ? av : bv;
         out[k] = Object.assign({}, older, newer);
       } else {
-        out[k] = mergeObjByKey(k, av, bv);
+        out[k] = mergeObjByKey(av, bv);
       }
       return;
     }
@@ -82,74 +113,85 @@ function mergeState(a, b) {
 }
 
 function applyUserDeletes(state) {
-  const del = state.ou_users_deleted || [];
-  if (!del.length) return state;
-  /* ou_users после объезда Firebase может быть объектом, а не массивом */
-  const arr = Array.isArray(state.ou_users) ? state.ou_users
-            : (state.ou_users && typeof state.ou_users === 'object' ? Object.values(state.ou_users) : null);
-  if (!arr) return state;
-  state.ou_users = arr.filter((u) => u && !del.some((d) => d && (d.id === u.id || (d.email && d.email === u.email))));
+  const del = asList(state.ou_users_deleted);
+  state.ou_users_deleted = del;
+  const users = asList(state.ou_users);
+  /* нормализация аккаунтов: id всегда число, email всегда строчными буквами —
+     иначе один и тот же человек «теряется» при сравнениях и дублируется */
+  state.ou_users = users
+    .filter((u) => u && typeof u === 'object' && u.id != null && u.email)
+    .map((u) => Object.assign({}, u, { id: +u.id, email: String(u.email).trim().toLowerCase() }))
+    .filter((u) => !isNaN(u.id))
+    .filter((u) => !del.some((d) => d && (d.id === u.id || (d.email && d.email === u.email))));
   return state;
 }
 
 function applyMessageDeletes(state) {
-  const del = state.ou_messages_deleted || [];
-  if (!del.length || !Array.isArray(state.ou_messages)) return state;
-  state.ou_messages = state.ou_messages.filter((m) => !del.includes(m.id));
+  const del = asList(state.ou_messages_deleted);
+  state.ou_messages_deleted = del;
+  if (state.ou_messages !== undefined) {
+    state.ou_messages = asList(state.ou_messages).filter((m) => m && !del.includes(m.id));
+  }
   return state;
 }
 
 /* ---------- ОБЛАКО (Firebase напрямую) ---------- */
+const CLOUD_PATH = '/state';
 const CloudSync = {
   silent: false,
   timer: null,
+  pushing: false,
+  dirty: false,
   readLocal() {
     const o = {};
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
-      if (!k || k.indexOf('ou_') !== 0 || k === 'ou_session') continue;
+      if (!isSyncKey(k)) continue;
       try { o[k] = JSON.parse(localStorage.getItem(k)); } catch (e) {}
     }
     return o;
   },
+  /* всё, что уходит в облако: без локальных снимков и без больших base64-приложений */
   strip(state) {
-    const clean = JSON.parse(JSON.stringify(state));
+    const clean = {};
+    Object.keys(state).forEach((k) => { if (isSyncKey(k)) clean[k] = state[k]; });
     ['ou_local_pubs', 'ou_local_translations'].forEach((k) => {
-      (clean[k] || []).forEach((x) => { if (x && x.fileData) delete x.fileData; });
+      asList(clean[k]).forEach((x) => { if (x && x.fileData) delete x.fileData; });
     });
     return clean;
   },
   writeAll(state) {
     this.silent = true;
     Object.keys(state).forEach((k) => {
+      if (!isSyncKey(k)) return;
       try { localStorage.setItem(k, JSON.stringify(state[k])); } catch (e) {}
     });
     /* снимок последнего облачного состояния — нужен pushNow(), который не может
        ждать сеть при закрытии страницы (без него last-writer-wins тёр чужие фото) */
-    try { localStorage.setItem('ou_cloud_prev', JSON.stringify(state)); } catch (e) {}
+    try { localStorage.setItem('ou_cloud_prev', JSON.stringify(this.strip(state))); } catch (e) {}
     this.silent = false;
+  },
+  prevCloud() {
+    try {
+      const p = JSON.parse(localStorage.getItem('ou_cloud_prev') || 'null');
+      return (p && typeof p === 'object' && !Array.isArray(p)) ? p : {};
+    } catch (e) { return {}; }
+  },
+  normalize(state) {
+    return applyMessageDeletes(applyUserDeletes(state));
   },
   reconcile(local, cloud) {
     let merged = mergeState(local, cloud);
-    ['ou_users', 'ou_departments'].forEach((k) => {
-      if (cloud[k] !== undefined) merged[k] = cloud[k];
-    });
     /* ПРАВКИ ЛЮДЕЙ — сливаем по id, а не целиком */
     {
-      const ov = mergeObjByKey('ou_people_overrides',
-        (merged.ou_people_overrides && typeof merged.ou_people_overrides === 'object') ? merged.ou_people_overrides : {},
-        (cloud.ou_people_overrides && typeof cloud.ou_people_overrides === 'object') ? cloud.ou_people_overrides : {});
+      const ov = mergeObjByKey(asListOrObj(merged.ou_people_overrides), asListOrObj(cloud.ou_people_overrides));
       [merged, cloud].forEach((src) => {
         Object.keys(ov).forEach((pid) => {
           const layers = [];
-          try {
-            const pr = src['ou_profile_' + pid];
-            if (pr && typeof pr === 'object') layers.push(pr);
-            const us = src.ou_users;
-            const arr = Array.isArray(us) ? us : (us ? Object.values(us) : []);
-            const acc = arr.find((u) => u && String(u.id) === String(pid));
-            if (acc && acc.photo) layers.push({ photo: acc.photo, _ts: acc._ts });
-          } catch (e) {}
+          const pr = src['ou_profile_' + pid];
+          if (pr && typeof pr === 'object') layers.push(pr);
+          const acc = asList(src.ou_users).find((u) => u && String(u.id) === String(pid));
+          if (acc && acc.photo) layers.push({ photo: acc.photo, _ts: acc._ts });
           layers.forEach((layer) => {
             Object.keys(layer).forEach((f) => {
               if (f === '_ts' || f === 'id') return;
@@ -168,7 +210,6 @@ const CloudSync = {
        мест (ou_people_photos, ou_people_overrides, ou_profile_<id>, ou_users)
        и берём самое свежее по _ts. Так аватарку гарантированно видят все. */
     {
-      const phArr = (v) => Array.isArray(v) ? v : (v && typeof v === 'object' ? Object.values(v) : []);
       const collectPhotos = (src) => {
         const best = {};
         const put = (id, url, ts) => {
@@ -177,8 +218,8 @@ const CloudSync = {
           const t = ts || 0;
           if (!best[k] || t >= best[k]._ts) best[k] = { photo: url, _ts: t };
         };
-        phArr(src.ou_people_photos).forEach((x) => x && put(x.id, x.photo, x._ts));
-        Object.keys(src.ou_people_overrides || {}).forEach((pid) => {
+        asList(src.ou_people_photos).forEach((x) => x && put(x.id, x.photo, x._ts));
+        Object.keys(asListOrObj(src.ou_people_overrides)).forEach((pid) => {
           const o = src.ou_people_overrides[pid];
           if (o && o.photo) put(pid, o.photo, o._ts);
         });
@@ -188,7 +229,7 @@ const CloudSync = {
             if (p && p.photo) put(k.slice('ou_profile_'.length), p.photo, p._ts);
           }
         });
-        phArr(src.ou_users).forEach((u) => u && u.photo && put(u.id, u.photo, u._ts));
+        asList(src.ou_users).forEach((u) => u && u.photo && put(u.id, u.photo, u._ts));
         return best;
       };
       const localPhotos = collectPhotos(local);
@@ -208,15 +249,14 @@ const CloudSync = {
       });
       merged.ou_people_photos = photoMerged;
     }
-    return merged;
+    return this.normalize(merged);
   },
   async load() {
     try {
-      const cloud = await FBApi.get('/state');
+      const cloud = await FBApi.get(CLOUD_PATH);
       if (!cloud || typeof cloud !== 'object' || Array.isArray(cloud)) return;
-      this.writeAll(applyMessageDeletes(applyUserDeletes(this.reconcile(this.readLocal(), cloud))));
-      this.schedulePush();
-    } catch (e) { /* офлайн */ }
+      this.writeAll(this.reconcile(this.readLocal(), cloud));
+    } catch (e) { /* офлайн — работаем с локальной копией */ }
   },
   schedulePush() {
     if (this.silent) return;
@@ -225,31 +265,43 @@ const CloudSync = {
   },
   async push() {
     if (this.silent) return;
+    clearTimeout(this.timer);
+    if (this.pushing) { this.dirty = true; return; }
+    this.pushing = true;
+    this.dirty = false;
     try {
       const local = this.readLocal();
-      let merged = local;
+      let merged;
       try {
-        const cloud = await FBApi.get('/state');
-        if (cloud && typeof cloud === 'object') merged = this.reconcile(local, cloud);
-        else merged = applyMessageDeletes(applyUserDeletes(mergeState(local, {})));
-      } catch (e) { merged = local; }
-      merged = this.strip(applyMessageDeletes(applyUserDeletes(merged)));
-      await FBApi.put('/state', merged);
-      this.writeAll(merged);
-    } catch (e) {}
+        const cloud = await FBApi.get(CLOUD_PATH);
+        merged = (cloud && typeof cloud === 'object' && !Array.isArray(cloud))
+          ? this.reconcile(local, cloud)
+          : this.reconcile(local, this.prevCloud());
+      } catch (e) {
+        /* сети нет: сливаем локальное изменение со последним известным снимком облака */
+        merged = this.reconcile(local, this.prevCloud());
+      }
+      const payload = this.strip(merged);
+      try {
+        await FBApi.put(CLOUD_PATH, payload);
+        this.writeAll(payload);
+      } catch (e) {
+        /* запись не прошла (офлайн/квота) — оставляем изменения в localStorage,
+           они уйдут в облако при следующем сохранении или закрытии страницы */
+        this.writeAll(merged);
+      }
+    } finally {
+      this.pushing = false;
+      if (this.dirty) this.schedulePush();
+    }
   },
   pushNow() {
     if (this.silent) return;
     try {
       /* при закрытии страницы тоже сливаем по-человечески (без ожидания сети):
          иначе last-writer-wins затрёт чужие аватарки */
-      let merged = this.readLocal();
-      try {
-        const prev = JSON.parse(localStorage.getItem('ou_cloud_prev') || 'null');
-        if (prev && typeof prev === 'object') merged = this.reconcile(merged, prev);
-      } catch (e) {}
-      merged = this.strip(applyMessageDeletes(applyUserDeletes(merged)));
-      FBApi.put('/state', merged).catch(() => {});
+      const merged = this.reconcile(this.readLocal(), this.prevCloud());
+      FBApi.put(CLOUD_PATH, this.strip(merged)).catch(() => {});
     } catch (e) {}
   }
 };
@@ -258,7 +310,7 @@ const CloudSync = {
   const origSet = Storage.prototype.setItem;
   Storage.prototype.setItem = function (k, v) {
     origSet.call(this, k, v);
-    if (typeof k === 'string' && k.indexOf('ou_') === 0 && k !== 'ou_session') CloudSync.schedulePush();
+    if (isSyncKey(k)) CloudSync.schedulePush();
   };
   window.addEventListener('pagehide', () => CloudSync.pushNow());
   window.addEventListener('beforeunload', () => CloudSync.pushNow());
@@ -268,8 +320,12 @@ const CloudSync = {
 const LocalUsers = {
   KEY: 'ou_users',
   DEL: 'ou_users_deleted',
-  list() { try { return JSON.parse(localStorage.getItem(this.KEY)) || []; } catch (e) { return []; } },
-  deleted() { try { return JSON.parse(localStorage.getItem(this.DEL)) || []; } catch (e) { return []; } },
+  /* все списки читаем через asList: после облачной синхронизации вместо
+     массива в localStorage может лежать объект или дырявый массив */
+  list() { return asList(this._raw()); },
+  _raw() { try { return JSON.parse(localStorage.getItem(this.KEY)); } catch (e) { return []; } },
+  deleted() { return asList(this._rawDel()); },
+  _rawDel() { try { return JSON.parse(localStorage.getItem(this.DEL)); } catch (e) { return []; } },
   add(u) { u._ts = _ts(); const l = this.list(); l.push(u); localStorage.setItem(this.KEY, JSON.stringify(l)); },
   /* поиск по email — БЕЗ УЧЁТА РЕГИСТРА: «Иванов@mail.ru» и «ivanov@mail.ru» —
      один и тот же адрес. Сравнение идёт по всей базе (локальной + облачной),
@@ -279,7 +335,9 @@ const LocalUsers = {
     const e = this.normEmail(email);
     return this.list().find((u) => this.normEmail(u.email) === e);
   },
-  byId(id) { return this.list().find((u) => u.id === id); },
+  /* id сравнение через String(): после облачной синхронизации id может лежать
+     как строка, иначе текущий пользователь «не находится» и пропадает из сайта */
+  byId(id) { return this.list().find((u) => String(u.id) === String(id)); },
   update(id, patch) {
     patch._ts = _ts();
     const l = this.list();
